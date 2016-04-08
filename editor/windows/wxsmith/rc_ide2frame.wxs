@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<wxsmith>
+	<object class="wxFrame" name="rc_ide2Frame">
+		<title>RC Basic</title>
+		<centered>1</centered>
+		<icon>C:\Users\Recademics\Desktop\rc_basic_win\ide\rc_ide2\wxsmith\rcbasic.ico</icon>
+		<size>640,480</size>
+		<minsize>640,480</minsize>
+		<exstyle>wxFRAME_EX_METAL</exstyle>
+		<object class="wxBoxSizer" variable="BoxSizer1" member="no">
+			<object class="sizeritem">
+				<object class="wxAuiNotebook" name="ID_AUINOTEBOOK1" variable="AuiNotebook1" member="yes" />
+				<flag>wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
+				<border>1</border>
+				<option>1</option>
+			</object>
+		</object>
+		<object class="wxMenuBar" variable="MenuBar1" member="no">
+			<object class="wxMenu" variable="Menu1" member="no">
+				<label>&amp;File</label>
+				<object class="wxMenuItem" name="newID" variable="MenuItem6" member="yes">
+					<label>New</label>
+					<handler function="OnNewPage" entry="EVT_MENU" />
+				</object>
+				<object class="wxMenuItem" name="openID" variable="MenuItem5" member="yes">
+					<label>Open</label>
+					<handler function="OnPageOpen" entry="EVT_MENU" />
+				</object>
+				<object class="wxMenuItem" name="saveID" variable="MenuItem4" member="yes">
+					<label>Save</label>
+					<handler function="onSavePage" entry="EVT_MENU" />
+				</object>
+				<object class="wxMenuItem" name="saveAsID" variable="MenuItem3" member="yes">
+					<label>Save As</label>
+					<handler function="OnSavePageAs" entry="EVT_MENU" />
+				</object>
+				<object class="wxMenuItem" name="idMenuQuit" variable="MenuItem1" member="no">
+					<label>Quit</label>
+					<accel>Alt-F4</accel>
+					<help>Quit the application</help>
+					<handler function="OnQuit" entry="EVT_MENU" />
+				</object>
+			</object>
+			<object class="wxMenu" variable="Menu3" member="yes">
+				<label>Edit</label>
+				<object class="wxMenuItem" name="undoID" variable="MenuItem7" member="yes">
+					<label>Undo</label>
+					<handler function="OnUndo" entry="EVT_MENU" />
+				</object>
+				<object class="wxMenuItem" name="redoID" variable="MenuItem8" member="yes">
+					<label>Redo</label>
+					<handler function="OnRedo" entry="EVT_MENU" />
+				</object>
+				<object class="separator" />
+				<object class="wxMenuItem" name="cutID" variable="MenuItem9" member="yes">
+					<label>Cut</label>
+					<handler function="OnCut" entry="EVT_MENU" />
+				</object>
+				<object class="wxMenuItem" name="copyID" variable="MenuItem10" member="yes">
+					<label>Copy</label>
+					<handler function="OnCopy" entry="EVT_MENU" />
+				</object>
+				<object class="wxMenuItem" name="pasteID" variable="MenuItem11" member="yes">
+					<label>Paste</label>
+					<handler function="OnPaste" entry="EVT_MENU" />
+				</object>
+				<object class="wxMenuItem" name="deleteID" variable="MenuItem12" member="yes">
+					<label>Delete</label>
+					<handler function="OnDelete" entry="EVT_MENU" />
+				</object>
+			</object>
+			<object class="wxMenu" variable="Menu4" member="yes">
+				<label>Build</label>
+				<object class="wxMenuItem" name="compileID" variable="MenuItem13" member="yes">
+					<label>Compile</label>
+					<handler function="OnCompile" entry="EVT_MENU" />
+				</object>
+				<object class="wxMenuItem" name="runID" variable="MenuItem14" member="yes">
+					<label>Run</label>
+					<handler function="OnRun" entry="EVT_MENU" />
+				</object>
+			</object>
+			<object class="wxMenu" variable="Menu2" member="no">
+				<label>Help</label>
+				<object class="wxMenuItem" name="idMenuAbout" variable="MenuItem2" member="no">
+					<label>About</label>
+					<accel>F1</accel>
+					<help>Show info about this application</help>
+					<handler function="OnAbout" entry="EVT_MENU" />
+				</object>
+				<object class="wxMenuItem" name="referenceID" variable="MenuItem15" member="yes">
+					<label>Reference</label>
+					<handler function="OnReference" entry="EVT_MENU" />
+				</object>
+			</object>
+		</object>
+		<object class="wxStatusBar" name="ID_STATUSBAR1" variable="StatusBar1" member="yes">
+			<fields>1</fields>
+			<widths>-1</widths>
+			<styles>wxSB_NORMAL</styles>
+		</object>
+		<object class="wxToolBar" name="ID_TOOLBAR1" variable="ToolBar1" member="yes">
+			<object class="tool" name="toolNewID" variable="ToolBarItem1" member="yes">
+				<label>New File</label>
+				<bitmap stock_id="wxART_NEW" />
+				<longhelp>New File</longhelp>
+				<handler function="OnNewPage" entry="EVT_TOOL" />
+			</object>
+			<object class="tool" name="toolOpenID" variable="ToolBarItem2" member="yes">
+				<label>Open File</label>
+				<bitmap stock_id="wxART_FILE_OPEN" />
+				<longhelp>Open File</longhelp>
+				<handler function="OnPageOpen" entry="EVT_TOOL" />
+			</object>
+			<object class="tool" name="toolSaveID" variable="ToolBarItem3" member="yes">
+				<label>Save File</label>
+				<bitmap stock_id="wxART_FILE_SAVE" />
+				<handler function="onSavePage" entry="EVT_TOOL" />
+			</object>
+			<object class="tool" name="toolSaveAsID" variable="ToolBarItem4" member="yes">
+				<label>Save File As</label>
+				<bitmap stock_id="wxART_FILE_SAVE_AS" />
+				<longhelp>Save File As</longhelp>
+				<handler function="OnSavePageAs" entry="EVT_TOOL" />
+			</object>
+			<object class="separator" />
+			<object class="tool" name="toolRunID" variable="ToolBarItem5" member="yes">
+				<label>Run Program</label>
+				<bitmap>C:\Users\Recademics\Desktop\rc_basic_win\ide\rc_ide2\wxsmith\player_play.png</bitmap>
+				<longhelp>Run Program</longhelp>
+				<handler function="OnRun" entry="EVT_TOOL" />
+			</object>
+		</object>
+	</object>
+</wxsmith>
