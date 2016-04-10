@@ -1167,6 +1167,7 @@ void rc_media_clearScreen_hw()
         //SDL_SetRenderTarget(rc_win_renderer[rc_active_window], rc_hscreen[rc_active_window][rc_active_screen]);
         SDL_SetRenderDrawColor(rc_win_renderer[rc_active_window], rc_clearColor>>16, rc_clearColor>>8, rc_clearColor, rc_clearColor>>24);
         SDL_RenderClear(rc_win_renderer[rc_active_window]);
+        SDL_SetRenderDrawColor(rc_win_renderer[rc_active_window], rc_ink_color.r, rc_ink_color.g, rc_ink_color.b, rc_ink_color.a);
         //SDL_RenderFillRect(rc_win_renderer[rc_active_window], &rc_screen_rect[rc_active_window][rc_active_screen]);
         //SDL_SetRenderTarget(rc_win_renderer[rc_active_window], rc_hscreen[rc_active_window][rc_active_screen]);
     }
