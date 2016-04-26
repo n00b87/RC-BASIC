@@ -1492,7 +1492,7 @@
 	"wx/dynarray.h"
 	"wx/msw/toolbar.h"
 
-1459195044 source:c:\users\recademics\desktop\rc_basic_win\ide\rc_ide2\rc_ide2main.cpp
+1459799311 source:c:\users\recademics\desktop\rc_basic_win\ide\rc_ide2\rc_ide2main.cpp
 	"rc_ide2Main.h"
 	<wx/msgdlg.h>
 	<wx/filedlg.h>
@@ -1505,6 +1505,7 @@
 	<wx/utils.h>
 	<wx/artprov.h>
 	<wx/bitmap.h>
+	<wx/icon.h>
 	<wx/intl.h>
 	<wx/image.h>
 	<wx/string.h>
@@ -1739,7 +1740,7 @@
 
 1412529550 c:\wxwidgets-3.0.2\include\wx\msw\ole\droptgt.h
 
-1452978904 source:c:\users\recademics\desktop\rc_basic_win\ide\rc_ide2\resource.rc
+1459800370 source:c:\users\recademics\desktop\rc_basic_win\ide\rc_ide2\resource.rc
 	"wx/msw/wx.rc"
 
 1412529550 c:\wxwidgets-3.0.2\include\wx\msw\wx.rc

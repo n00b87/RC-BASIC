@@ -238,7 +238,6 @@ bool rc_media_init()
         rc_bb_rect[i].h = 0;
         for(int j = 0; j < MAX_SCREENS; j++)
         {
-            rc_himage[i][j] = NULL;
             rc_hscreen[i][j] = NULL;
             rc_sscreen[i][j] = NULL;
             rc_screen_rect[i][j].x = 0;
@@ -252,6 +251,8 @@ bool rc_media_init()
     }
     for(int i = 0; i < MAX_IMAGES; i++)
     {
+		for(int w = 0; w < MAX_WINDOWS; w++)
+            rc_himage[i][w] = NULL;
 
         rc_simage[i] = NULL;
         rc_image_rect[i].x = 0;
@@ -939,7 +940,7 @@ void rc_media_openScreen_hw(int s_num, int w, int h, int vpx, int vpy, int vpw, 
         cout << "Screen #" << s_num << " is already open" << endl;
         return;
     }
-    rc_hscreen[rc_active_window][s_num] = SDL_CreateTexture(rc_win_renderer[rc_active_window], rc_win_surface[rc_active_window]->format->format, SDL_TEXTUREACCESS_TARGET, w, h);
+    rc_hscreen[rc_active_window][s_num] = SDL_CreateTexture(rc_win_renderer[rc_active_window], rc_pformat->format, SDL_TEXTUREACCESS_TARGET, w, h);
     rc_screen_transparent[rc_active_window][s_num] = 0;
 
     switch(flag)
@@ -1114,6 +1115,7 @@ void rc_media_clearScreen_hw()
         //SDL_SetRenderTarget(rc_win_renderer[rc_active_window], rc_hscreen[rc_active_window][rc_active_screen]);
         SDL_SetRenderDrawColor(rc_win_renderer[rc_active_window], rc_clearColor>>16, rc_clearColor>>8, rc_clearColor, rc_clearColor>>24);
         SDL_RenderClear(rc_win_renderer[rc_active_window]);
+        SDL_SetRenderDrawColor(rc_win_renderer[rc_active_window], rc_ink_color.r, rc_ink_color.g, rc_ink_color.b, rc_ink_color.a);
         //SDL_RenderFillRect(rc_win_renderer[rc_active_window], &rc_screen_rect[rc_active_window][rc_active_screen]);
         //SDL_SetRenderTarget(rc_win_renderer[rc_active_window], rc_hscreen[rc_active_window][rc_active_screen]);
     }
@@ -2963,7 +2965,8 @@ void rc_media_updateWindow_hw()
     int s_num = 0;
     SDL_SetRenderTarget(rc_win_renderer[rc_active_window], rc_backBuffer[rc_active_window]);
     SDL_SetRenderDrawColor(rc_win_renderer[rc_active_window], rc_clearColor >> 16, rc_clearColor >> 8, rc_clearColor, 255);
-    SDL_RenderClear(rc_win_renderer[rc_active_window]);
+    //SDL_RenderClear(rc_win_renderer[rc_active_window]);
+    SDL_RenderFillRect(rc_win_renderer[rc_active_window], NULL);
     for(int i = MAX_SCREENS-1; i >= 0; i--)
     {
         s_num = rc_screen_zOrder[rc_active_window][i];

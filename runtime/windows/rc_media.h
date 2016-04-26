@@ -347,11 +347,16 @@ void rc_media_quit()
                 //cout << "SUCCESS\n";
                 //SDL_DestroyTexture(rc_hscreen[i][j]);
             }
+            if(rc_hscreen[i][j] != NULL)
+            {
+                SDL_DestroyTexture(rc_hscreen[i][j]);
+                rc_hscreen[i][j] = NULL;
+            }
         }
         for(int j = 0; j < MAX_IMAGES; j++)
         {
-            SDL_DestroyTexture(rc_himage[i][j]);
-            rc_himage[i][j] = NULL;
+            SDL_DestroyTexture(rc_himage[j][i]);
+            rc_himage[j][i] = NULL;
         }
     }
     //cout << "NORMAL BOOTS" << endl;
@@ -444,7 +449,7 @@ inline bool rc_media_openWindow_hw(int win_num, string caption, int x, int y, in
     if(rc_active_window == -1)
         rc_active_window = win_num;
 
-    rc_win_surface[win_num] = SDL_GetWindowSurface(rc_win[win_num]);
+    //rc_win_surface[win_num] = SDL_GetWindowSurface(rc_win[win_num]);
     rc_win_id[win_num] = SDL_GetWindowID(rc_win[win_num]);
 
     rc_win_width = w;
@@ -883,7 +888,7 @@ void rc_media_maximizeWindow(int win_num)
         SDL_GetWindowDisplayMode(rc_win[win_num],&rc_displayMode[win_num]);
         rc_bb_rect[win_num].w = rc_displayMode[win_num].w;
         rc_bb_rect[win_num].h = rc_displayMode[win_num].h;
-        rc_win_surface[win_num] = SDL_GetWindowSurface(rc_win[win_num]);
+        //rc_win_surface[win_num] = SDL_GetWindowSurface(rc_win[win_num]);
     }
     else
         cout << "MaximizeWindow Error: Window #" << win_num << " is not an active window" << endl;
@@ -897,7 +902,7 @@ void rc_media_minimizeWindow(int win_num)
         SDL_GetWindowDisplayMode(rc_win[win_num],&rc_displayMode[win_num]);
         rc_bb_rect[win_num].w = rc_displayMode[win_num].w;
         rc_bb_rect[win_num].h = rc_displayMode[win_num].h;
-        rc_win_surface[win_num] = SDL_GetWindowSurface(rc_win[win_num]);
+        //rc_win_surface[win_num] = SDL_GetWindowSurface(rc_win[win_num]);
     }
     else
         cout << "MinimizeWindow Error: Window #" << win_num << " is not an active window" << endl;
@@ -919,7 +924,7 @@ void rc_media_restoreWindow(int win_num)
         SDL_GetWindowDisplayMode(rc_win[win_num], &rc_displayMode[win_num]);
         rc_bb_rect[win_num].w = rc_displayMode[win_num].w;
         rc_bb_rect[win_num].h = rc_displayMode[win_num].h;
-        rc_win_surface[win_num] = SDL_GetWindowSurface(rc_win[win_num]);
+        //rc_win_surface[win_num] = SDL_GetWindowSurface(rc_win[win_num]);
     }
     else
         cout << "RestoreWindow Error: Window #" << win_num << " is not an active window" << endl;
@@ -940,12 +945,12 @@ void rc_media_openScreen_sw(int s_num, int w, int h, int vpx, int vpy, int vpw, 
 {
     if(s_num < 0 || s_num > MAX_SCREENS)
     {
-        cout << "Screen #" << s_num << " is not available" << endl;
+        cout << "Canvas #" << s_num << " is not available" << endl;
         return;
     }
     if(rc_sscreen[rc_active_window][s_num]!=NULL)
     {
-        cout << "Screen #" << s_num << " is already open" << endl;
+        cout << "Canvas #" << s_num << " is already open" << endl;
         return;
     }
     SDL_Surface * tmpSurf = SDL_CreateRGBSurface(0,w,h,32,0,0,0,0);
@@ -984,21 +989,21 @@ void rc_media_openScreen_hw(int s_num, int w, int h, int vpx, int vpy, int vpw, 
 {
     if(s_num < 0 || s_num > MAX_SCREENS)
     {
-        cout << "Screen #" << s_num << " is not available" << endl;
+        cout << "Canvas #" << s_num << " is not available" << endl;
         return;
     }
-    if(rc_sscreen[rc_active_window][s_num]!=NULL)
+    if(rc_hscreen[rc_active_window][s_num]!=NULL)
     {
-        cout << "Screen #" << s_num << " is already open" << endl;
+        cout << "Canvas #" << s_num << " is already open" << endl;
         return;
     }
-    rc_hscreen[rc_active_window][s_num] = SDL_CreateTexture(rc_win_renderer[rc_active_window], rc_win_surface[rc_active_window]->format->format, SDL_TEXTUREACCESS_TARGET, w, h);
+    rc_hscreen[rc_active_window][s_num] = SDL_CreateTexture(rc_win_renderer[rc_active_window], rc_pformat->format, SDL_TEXTUREACCESS_TARGET, w, h);
     rc_screen_transparent[rc_active_window][s_num] = 0;
 
     switch(flag)
     {
         case 0:
-            //solid screen
+            //solid Canvas
             break;
         case 1:
             rc_screen_transparent[rc_active_window][s_num] = 1;
@@ -1006,7 +1011,7 @@ void rc_media_openScreen_hw(int s_num, int w, int h, int vpx, int vpy, int vpw, 
             SDL_SetRenderTarget(rc_win_renderer[rc_active_window], rc_hscreen[rc_active_window][s_num]);
             SDL_SetRenderDrawColor(rc_win_renderer[rc_active_window], 0, 0, 0, 0);
             SDL_RenderClear(rc_win_renderer[rc_active_window]);
-            //cout << "screen opened\n";
+            //cout << "Canvas opened\n";
             break;
     }
     rc_screen_rect[rc_active_window][s_num].x = vpx;
@@ -1060,7 +1065,6 @@ void rc_media_screen_hw(int s_num)
     {
         rc_active_screen = s_num;
         SDL_SetRenderTarget(rc_win_renderer[rc_active_window], rc_hscreen[rc_active_window][s_num]);
-        //cout << "active screen = hscreen[" << rc_active_window << "][" << s_num << "]\n";
     }
 }
 
@@ -1100,7 +1104,7 @@ void rc_media_getScreenViewport(double * x, double * y, double * w, double * h)
         *h = rc_screen_rect[rc_active_window][rc_active_screen].h;
     }
     else
-        cout << "GetScreenViewport Error: Screen #" << rc_active_screen << " is not accessible" << endl;
+        cout << "GetCanvasViewport Error: Canvas #" << rc_active_screen << " is not accessible" << endl;
 }
 
 void rc_media_screenOffset(int x, int y)
@@ -1110,7 +1114,7 @@ void rc_media_screenOffset(int x, int y)
         if( (x + rc_screen_rect[rc_active_window][rc_active_screen].w) > rc_screen_width[rc_active_window][rc_active_screen] ||
             (y + rc_screen_rect[rc_active_window][rc_active_screen].h) > rc_screen_height[rc_active_window][rc_active_screen] )
         {
-            cout << "ScreenView Error: View exceeds Screen #" << rc_active_screen << " Size" << endl;
+            cout << "CanvasOffset Error: View exceeds Canvas #" << rc_active_screen << " Size" << endl;
             return;
         }
         rc_screenview[rc_active_window][rc_active_screen].x = x;
@@ -1167,6 +1171,7 @@ void rc_media_clearScreen_hw()
         //SDL_SetRenderTarget(rc_win_renderer[rc_active_window], rc_hscreen[rc_active_window][rc_active_screen]);
         SDL_SetRenderDrawColor(rc_win_renderer[rc_active_window], rc_clearColor>>16, rc_clearColor>>8, rc_clearColor, rc_clearColor>>24);
         SDL_RenderClear(rc_win_renderer[rc_active_window]);
+        SDL_SetRenderDrawColor(rc_win_renderer[rc_active_window], rc_ink_color.r, rc_ink_color.g, rc_ink_color.b, rc_ink_color.a);
         //SDL_RenderFillRect(rc_win_renderer[rc_active_window], &rc_screen_rect[rc_active_window][rc_active_screen]);
         //SDL_SetRenderTarget(rc_win_renderer[rc_active_window], rc_hscreen[rc_active_window][rc_active_screen]);
     }
@@ -1360,7 +1365,7 @@ void rc_media_setScreenZ(int z)
     {
         if(z < 0 || z >= MAX_SCREENS)
         {
-            cout << "SetScreenZ Error: Z Order must be a value from 0 to " << MAX_SCREENS-1 << endl;
+            cout << "SetCanvasZ Error: Z Order must be a value from 0 to " << MAX_SCREENS-1 << endl;
             return;
         }
         int tmp_z = 0;
@@ -1719,13 +1724,13 @@ Uint32 rc_media_getPixel_sw(int x, int y)
 
 Uint32 rc_media_getPixel_hw(int x, int y)
 {
-    //Uint32 * s_pixels = (Uint32*) rc_win_surface[rc_active_window]->pixels;
     SDL_SetRenderTarget(rc_win_renderer[rc_active_window], NULL);
-    //cout << "surface = ( " << rc_win_surface[rc_active_window]->w << ", " << rc_win_surface[rc_active_window]->h << " ) " << endl;
-    Uint32 * s_pixels = (Uint32*)SDL_malloc(sizeof(Uint32) * (rc_win_surface[rc_active_window]->w * rc_win_surface[rc_active_window]->h));
-    SDL_RenderReadPixels(rc_win_renderer[rc_active_window], NULL, rc_win_surface[rc_active_window]->format->format, (void*)s_pixels, rc_win_surface[rc_active_window]->pitch);
-    Uint32 p_color =  s_pixels[y*rc_win_surface[rc_active_window]->w+x];
-    //cout << "color = " << p_color << endl;
+    int w = 0;
+    int h = 0;
+    SDL_GetWindowSize(rc_win[rc_active_window], &w, &h);
+    Uint32 * s_pixels = (Uint32*)SDL_malloc(sizeof(Uint32) * (w * h));
+    SDL_RenderReadPixels(rc_win_renderer[rc_active_window], NULL, rc_pformat->format, (void*)s_pixels, w*4);
+    Uint32 p_color =  s_pixels[y*w+x];
     SDL_free(s_pixels);
     SDL_SetRenderTarget(rc_win_renderer[rc_active_window], rc_hscreen[rc_active_window][rc_active_screen]);
     return p_color;
@@ -1733,10 +1738,8 @@ Uint32 rc_media_getPixel_hw(int x, int y)
 
 void rc_media_ink(Uint32 ink_color)
 {
-    //cout << "ink = " << ink_color << endl;
     rc_ink = ink_color;
-    rc_ink_color.a = ink_color>>24;//ink_color >> 24;
-    //cout << "alpha = " << (int)rc_ink_color.a << endl;
+    rc_ink_color.a = ink_color>>24;
     rc_ink_color.r = ink_color >> 16;
     rc_ink_color.g = ink_color >> 8;
     rc_ink_color.b = ink_color;
@@ -1745,17 +1748,13 @@ void rc_media_ink(Uint32 ink_color)
 
 Uint32 rc_media_rgb(Uint8 r, Uint8 g, Uint8 b)
 {
-    //cout << "r = " << (int)  r << "   g = " << (int) g << "   b = " << (int)b << endl;
     Uint32 rgba_map = (Uint32)SDL_MapRGBA(rc_pformat,r,g,b,255);
-    //Uint32 rgba_map = (r << 16) + (g << 8) + b + (255 << 24);// + (255<<24);
-    //cout << "rgb_out = " << rgba_map << endl;
     return rgba_map;
 }
 
 Uint32 rc_media_rgba(Uint8 r, Uint8 g, Uint8 b, Uint8 a)
 {
     Uint32 rgba_map = (Uint32)SDL_MapRGBA(rc_pformat,r,g,b,a);
-    //rgba_map = rgba_map + (a<<24);
     return rgba_map;
 }
 
@@ -1866,7 +1865,7 @@ void rc_media_floodFill_hw(int x, int y)
         //SDL_RenderCopy(rc_win_renderer[rc_active_window],rc_hscreen[rc_active_window][rc_active_screen],NULL,&c_screen);
         //SDL_RenderCopyEx(rc_win_renderer[rc_active_window],rc_himage[slot][rc_active_window],NULL,NULL,0,NULL,rf);
 
-        if(SDL_RenderReadPixels(rc_win_renderer[rc_active_window], &c_screen, rc_win_surface[rc_active_window]->format->format,rc_sscreen[rc_active_window][rc_active_screen]->pixels,rc_sscreen[rc_active_window][rc_active_screen]->pitch) < 0)
+        if(SDL_RenderReadPixels(rc_win_renderer[rc_active_window], &c_screen, rc_pformat->format,rc_sscreen[rc_active_window][rc_active_screen]->pixels,rc_sscreen[rc_active_window][rc_active_screen]->pitch) < 0)
         {
             cout << "ReadPixel Error: " << SDL_GetError() << endl;
             SDL_SetRenderTarget(rc_win_renderer[rc_active_window], rc_hscreen[rc_active_window][rc_active_screen]);
@@ -1977,7 +1976,7 @@ void rc_media_loadImage_hw(int slot, string img_file)
         cout << "LoadImage Error: " << SDL_GetError() << endl;
         return;
     }
-    SDL_Surface * image_cv = SDL_ConvertSurface(image, rc_win_surface[rc_active_window]->format,0);
+    SDL_Surface * image_cv = SDL_ConvertSurface(image, rc_pformat,0);
     rc_image_width[slot] = image_cv->w;
     rc_image_height[slot] = image_cv->h;
     rc_image_isLoaded[slot] = true;
@@ -2027,7 +2026,7 @@ void rc_media_loadImage_ex_hw(int slot, string img_file, double color)
         cout << "LoadImage Error: " << SDL_GetError() << endl;
         return;
     }
-    SDL_Surface * image_cv = SDL_ConvertSurface(image, rc_win_surface[rc_active_window]->format,0);
+    SDL_Surface * image_cv = SDL_ConvertSurface(image, rc_pformat,0);
     rc_image_width[slot] = image_cv->w;
     rc_image_height[slot] = image_cv->h;
     rc_image_isLoaded[slot] = true;
@@ -2115,7 +2114,7 @@ void rc_media_createImage_Ex_hw(int slot, int w, int h, double * pdata, double c
     {
         img_pixels[i] = (Uint32)pdata[i];
     }
-    SDL_Surface * image_cv = SDL_ConvertSurface(img_surf, rc_win_surface[rc_active_window]->format,0);
+    SDL_Surface * image_cv = SDL_ConvertSurface(img_surf, rc_pformat,0);
     if(image_cv == NULL)
     {
         cout << "LoadImage Error: " << SDL_GetError() << endl;
@@ -2182,12 +2181,12 @@ void rc_media_colorKey_hw(int slot, double color)
         SDL_RendererFlip rf = (SDL_RendererFlip)(SDL_FLIP_VERTICAL);
 
         SDL_Surface * tmp_surf = SDL_CreateRGBSurface(0, rc_image_width[slot], rc_image_height[slot], 32, 0, 0, 0, 0);
-        SDL_Texture * tmp_tex = SDL_CreateTexture(rc_win_renderer[rc_active_window], rc_win_surface[rc_active_window]->format->format, SDL_TEXTUREACCESS_TARGET, rc_image_width[slot], rc_image_height[slot]);
+        SDL_Texture * tmp_tex = SDL_CreateTexture(rc_win_renderer[rc_active_window], rc_pformat->format, SDL_TEXTUREACCESS_TARGET, rc_image_width[slot], rc_image_height[slot]);
         SDL_SetRenderTarget(rc_win_renderer[rc_active_window],NULL);
         SDL_RenderCopy(rc_win_renderer[rc_active_window],rc_himage[slot][rc_active_window],NULL,&img_rect);
         //SDL_RenderCopyEx(rc_win_renderer[rc_active_window],rc_himage[slot][rc_active_window],NULL,NULL,0,NULL,rf);
 
-        SDL_RenderReadPixels(rc_win_renderer[rc_active_window], &img_rect, rc_win_surface[rc_active_window]->format->format,tmp_surf->pixels,tmp_surf->pitch);
+        SDL_RenderReadPixels(rc_win_renderer[rc_active_window], &img_rect, rc_pformat->format,tmp_surf->pixels,tmp_surf->pitch);
         //cout << "Colorkey = " << (Uint32)r << ", " << (Uint32)g << ", " << (Uint32)b << ", " << (Uint32)a << endl;
         rc_image_colorKey[slot] = c;
         rc_image_colorKey_r[slot] = c >> 16;
@@ -2210,12 +2209,12 @@ void rc_media_colorKey_hw(int slot, double color)
         SDL_RendererFlip rf = (SDL_RendererFlip)(SDL_FLIP_VERTICAL);
 
         SDL_Surface * tmp_surf = SDL_CreateRGBSurface(0, rc_image_width[slot], rc_image_height[slot], 32, 0, 0, 0, 0);
-        SDL_Texture * tmp_tex = SDL_CreateTexture(rc_win_renderer[rc_active_window], rc_win_surface[rc_active_window]->format->format, SDL_TEXTUREACCESS_TARGET, rc_image_width[slot], rc_image_height[slot]);
+        SDL_Texture * tmp_tex = SDL_CreateTexture(rc_win_renderer[rc_active_window], rc_pformat->format, SDL_TEXTUREACCESS_TARGET, rc_image_width[slot], rc_image_height[slot]);
         SDL_SetRenderTarget(rc_win_renderer[rc_active_window],NULL);
         SDL_RenderCopy(rc_win_renderer[rc_active_window],rc_himage[slot][rc_active_window],NULL,&img_rect);
         //SDL_RenderCopyEx(rc_win_renderer[rc_active_window],rc_himage[slot][rc_active_window],NULL,NULL,0,NULL,rf);
 
-        SDL_RenderReadPixels(rc_win_renderer[rc_active_window], &img_rect, rc_win_surface[rc_active_window]->format->format,tmp_surf->pixels,tmp_surf->pitch);
+        SDL_RenderReadPixels(rc_win_renderer[rc_active_window], &img_rect, rc_pformat->format,tmp_surf->pixels,tmp_surf->pitch);
         //cout << "Colorkey = " << (Uint32)r << ", " << (Uint32)g << ", " << (Uint32)b << ", " << (Uint32)a << endl;
         Uint32 * pxl = (Uint32*)tmp_surf->pixels;
         c = pxl[0];
@@ -3188,8 +3187,8 @@ int rc_getEvents()
                             break;
                         }
                     }
-                    rc_win_surface[rc_active_window] = SDL_GetWindowSurface(rc_win[rc_active_window]);
-                    rc_media_clearScreen_sw();
+                    //rc_win_surface[rc_active_window] = SDL_GetWindowSurface(rc_win[rc_active_window]);
+                    rc_media_clearScreen_hw();
                     break;
                 case SDL_WINDOWEVENT_CLOSE:
                     //rc_media_quit();

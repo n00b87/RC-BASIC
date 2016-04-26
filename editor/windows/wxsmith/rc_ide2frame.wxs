@@ -126,7 +126,7 @@
 			<object class="separator" />
 			<object class="tool" name="toolRunID" variable="ToolBarItem5" member="yes">
 				<label>Run Program</label>
-				<bitmap>C:\Users\Recademics\Desktop\rc_basic_win\ide\rc_ide2\wxsmith\player_play.png</bitmap>
+				<bitmap>img\player_play.png</bitmap>
 				<longhelp>Run Program</longhelp>
 				<handler function="OnRun" entry="EVT_TOOL" />
 			</object>

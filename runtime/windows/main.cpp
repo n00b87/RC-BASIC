@@ -7385,7 +7385,9 @@ int main(int argc, char * argv[])
     {
         //cout << "file not open:" << fname << endl;
         //system("PAUSE");
-        fname = argv[1];
+        if(argc > 1)
+            fname = argv[1];
+
         rc_file.open(fname.c_str(), fstream::in | fstream::binary);
         if(!rc_file.is_open())
             return 0;

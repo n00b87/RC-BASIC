@@ -143,7 +143,7 @@ rc_ide2Frame::rc_ide2Frame(wxWindow* parent,wxWindowID id)
     SetExtraStyle( GetExtraStyle() | wxFRAME_EX_METAL );
     {
     	wxIcon FrameIcon;
-    	FrameIcon.CopyFromBitmap(wxBitmap(wxImage(_T("C:\\Users\\Recademics\\Desktop\\rc_basic_win\\ide\\rc_ide2\\wxsmith\\rcbasic.ico"))));
+    	FrameIcon.CopyFromBitmap(wxBitmap(wxImage(_T("img\\rcbasic.ico"))));
     	SetIcon(FrameIcon);
     }
     BoxSizer1 = new wxBoxSizer(wxHORIZONTAL);
@@ -203,7 +203,7 @@ rc_ide2Frame::rc_ide2Frame(wxWindow* parent,wxWindowID id)
     ToolBarItem3 = ToolBar1->AddTool(toolSaveID, _("Save File"), wxArtProvider::GetBitmap(wxART_MAKE_ART_ID_FROM_STR(_T("wxART_FILE_SAVE")),wxART_TOOLBAR), wxNullBitmap, wxITEM_NORMAL, wxEmptyString, wxEmptyString);
     ToolBarItem4 = ToolBar1->AddTool(toolSaveAsID, _("Save File As"), wxArtProvider::GetBitmap(wxART_MAKE_ART_ID_FROM_STR(_T("wxART_FILE_SAVE_AS")),wxART_TOOLBAR), wxNullBitmap, wxITEM_NORMAL, wxEmptyString, _("Save File As"));
     ToolBar1->AddSeparator();
-    ToolBarItem5 = ToolBar1->AddTool(toolRunID, _("Run Program"), wxBitmap(wxImage(_T("C:\\Users\\Recademics\\Desktop\\rc_basic_win\\ide\\rc_ide2\\wxsmith\\player_play.png"))), wxNullBitmap, wxITEM_NORMAL, wxEmptyString, _("Run Program"));
+    ToolBarItem5 = ToolBar1->AddTool(toolRunID, _("Run Program"), wxBitmap(wxImage(_T("img\\player_play.png"))), wxNullBitmap, wxITEM_NORMAL, wxEmptyString, _("Run Program"));
     ToolBar1->Realize();
     SetToolBar(ToolBar1);
     SetSizer(BoxSizer1);

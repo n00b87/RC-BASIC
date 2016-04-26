@@ -3125,7 +3125,7 @@ int rc_tokenizer(std::string sline)
     for(int i = 0; i < rc_tokens_count; i++)
     {
         scanId = rc_tokens[i].substr(rc_tokens[i].find_first_of(">")+1);
-        if(rc_isKeyword(scanId))
+        if(rc_isKeyword(scanId) && rc_tokens[i].substr(0,4).compare("<id>")==0)
         {
             rc_tokens[i] = rc_keywordToken(scanId);
         }
