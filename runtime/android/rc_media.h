@@ -351,11 +351,15 @@ void rc_media_quit()
                 //cout << "SUCCESS\n";
                 //SDL_DestroyTexture(rc_hscreen[i][j]);
             }
+            if(rc_hscreen[i][j] != NULL)
+            {
+            	SDL_DestroyTexture(rc_hscreen[i][j]);
+            }
         }
         for(int j = 0; j < MAX_IMAGES; j++)
         {
-            SDL_DestroyTexture(rc_himage[i][j]);
-            rc_himage[i][j] = NULL;
+            SDL_DestroyTexture(rc_himage[j][i]);
+            rc_himage[j][i] = NULL;
         }
     }
     //cout << "NORMAL BOOTS" << endl;
@@ -831,7 +835,7 @@ void rc_media_maximizeWindow(int win_num)
         SDL_GetWindowDisplayMode(rc_win[win_num],&rc_displayMode[win_num]);
         rc_bb_rect[win_num].w = rc_displayMode[win_num].w;
         rc_bb_rect[win_num].h = rc_displayMode[win_num].h;
-        rc_win_surface[win_num] = SDL_GetWindowSurface(rc_win[win_num]);
+        //rc_win_surface[win_num] = SDL_GetWindowSurface(rc_win[win_num]);
     }
     else
         cout << "MaximizeWindow Error: Window #" << win_num << " is not an active window" << endl;
@@ -845,7 +849,7 @@ void rc_media_minimizeWindow(int win_num)
         SDL_GetWindowDisplayMode(rc_win[win_num],&rc_displayMode[win_num]);
         rc_bb_rect[win_num].w = rc_displayMode[win_num].w;
         rc_bb_rect[win_num].h = rc_displayMode[win_num].h;
-        rc_win_surface[win_num] = SDL_GetWindowSurface(rc_win[win_num]);
+        //rc_win_surface[win_num] = SDL_GetWindowSurface(rc_win[win_num]);
     }
     else
         cout << "MinimizeWindow Error: Window #" << win_num << " is not an active window" << endl;
@@ -867,7 +871,7 @@ void rc_media_restoreWindow(int win_num)
         SDL_GetWindowDisplayMode(rc_win[win_num], &rc_displayMode[win_num]);
         rc_bb_rect[win_num].w = rc_displayMode[win_num].w;
         rc_bb_rect[win_num].h = rc_displayMode[win_num].h;
-        rc_win_surface[win_num] = SDL_GetWindowSurface(rc_win[win_num]);
+        //rc_win_surface[win_num] = SDL_GetWindowSurface(rc_win[win_num]);
     }
     else
         cout << "RestoreWindow Error: Window #" << win_num << " is not an active window" << endl;
