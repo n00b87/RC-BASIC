@@ -7008,8 +7008,8 @@ inline int rc_vm_run()
         rc_vm_stack.push(rc_vm_f[i_val2]);
         rc_vm_stack.push(rc_vm_f[i_val3]);
 
-        //if(rc_nid[i_val1][0] <= rc_vm_f[i_val2])
-        //{
+        if(rc_nid[i_val1][0] <= rc_vm_f[i_val2])
+        {
             for(; rc_nid[i_val1][0] <= rc_vm_f[i_val2]; rc_nid[i_val1][0] += rc_vm_f[i_val3])
             {
                 RC_CURRENT_ADDRESS = f_start;
@@ -7100,7 +7100,100 @@ inline int rc_vm_run()
                 }
             }
             rc_nid[i_val1][0] -= rc_vm_f[i_val3];
-        //}
+        }
+        else
+        {
+            for(; rc_nid[i_val1][0] >= rc_vm_f[i_val2]; rc_nid[i_val1][0] += rc_vm_f[i_val3])
+            {
+                RC_CURRENT_ADDRESS = f_start;
+                rc_textinput_flag = false;
+                cycleVideo();
+                if(rc_checkEvent())
+                {
+                    while(rc_getEvents()){}
+                    SDL_PumpEvents();
+                    SDL_FlushEvents(SDL_FIRSTEVENT, SDL_LASTEVENT);
+                }
+                rc_vm_f[i_val3] = rc_vm_stack.top();
+                rc_vm_stack.pop();
+                rc_vm_f[i_val2] = rc_vm_stack.top();
+                rc_vm_stack.pop();
+                rc_vm_stack.push(rc_vm_f[i_val2]);
+                rc_vm_stack.push(rc_vm_f[i_val3]);
+                //cout << endl << "rc_nid = " << rc_nid[i_val1][0] << endl;
+                //cout << "rc_vm_f[2] = " << rc_vm_f[i_val2] << endl << endl;
+                f_err = 0;
+                while(f_err != 87)
+                {
+                    f_err = rc_vm_run();
+
+                    if(f_err == 86)
+                    {
+                        rc_vm_f[i_val3] = rc_vm_stack.top();
+                        rc_vm_stack.pop();
+                        rc_vm_f[i_val2] = rc_vm_stack.top();
+                        rc_vm_stack.pop();
+                        rc_vm_stack.push(rc_vm_f[i_val2]);
+                        rc_vm_stack.push(rc_vm_f[i_val3]);
+                    }
+                    else if(f_err == 94)
+                    {
+                        //cout << "we made it\n";
+                        if(exit_arg > 0)
+                        {
+                            //cout << "exit--\n";
+                            exit_arg = exit_arg - 1;
+                            rc_vm_stack.pop();
+                            rc_vm_stack.pop();
+                            return 94;
+                        }
+                        else
+                        {
+                            rc_vm_f[i_val3] = rc_vm_stack.top();
+                            rc_vm_stack.pop();
+                            rc_vm_f[i_val2] = rc_vm_stack.top();
+                            rc_vm_stack.pop();
+                            rc_vm_stack.push(rc_vm_f[i_val2]);
+                            rc_vm_stack.push(rc_vm_f[i_val3]);
+                            rc_vm_run();
+                            continue;
+                        }
+                    }
+                    else if(f_err == 96)
+                    {
+                        //cout << "gangsta\n";
+                        if(exit_arg > 0)
+                        {
+                            //cout << "balls sack" << endl;
+                            rc_vm_stack.pop();
+                            rc_vm_stack.pop();
+                            exit_arg = exit_arg - 1;
+                            return 96;
+                        }
+                        else
+                        {
+                            rc_vm_f[i_val3] = rc_vm_stack.top();
+                            rc_vm_stack.pop();
+                            rc_vm_f[i_val2] = rc_vm_stack.top();
+                            rc_vm_stack.pop();
+                            rc_vm_stack.push(rc_vm_f[i_val2]);
+                            rc_vm_stack.push(rc_vm_f[i_val3]);
+                            while(rc_vm_run()!=77){}
+                            //cout << "Return Called\n";
+                            //cout << "NEW SEGMENT = " << RC_CURRENT_SEGMENT << endl;
+                            //cout << "NEW ADDRESS = " << RC_CURRENT_ADDRESS << endl;
+                            //string ss; cin >> ss;
+                            //return 1;
+                        }
+                        //RC_CURRENT_ADDRESS = st_addr;
+                        //break;
+                    }
+                    else if(f_err == -1)
+                        return -1;
+                }
+            }
+            rc_nid[i_val1][0] += rc_vm_f[i_val3];
+        }
 
         //cout << endl << "end --- rc_nid = " << rc_nid[i_val1][0] << endl;
         //cout << "end --- rc_vm_f[2] = " << rc_vm_f[i_val2] << endl << endl;
