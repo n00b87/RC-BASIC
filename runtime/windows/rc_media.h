@@ -294,6 +294,7 @@ bool rc_media_init(string rc_path)
 	rc_pformat = SDL_AllocFormat(SDL_PIXELFORMAT_ARGB8888);
 
 	rc_udp_packet = SDLNet_AllocPacket(512);
+	rc_packet_size = 512;
 
     rc_console_pen.r = 255;
     rc_console_pen.g = 255;
@@ -405,7 +406,7 @@ inline bool rc_media_openWindow_sw(int win_num, string caption, int x, int y, in
     if(rc_active_window == -1)
         rc_active_window = win_num;
 
-    rc_win_surface[win_num] = SDL_GetWindowSurface(rc_win[win_num]);
+    //rc_win_surface[win_num] = SDL_GetWindowSurface(rc_win[win_num]);
     rc_win_id[win_num] = SDL_GetWindowID(rc_win[win_num]);
     SDL_SetSurfaceRLE(rc_win_surface[win_num],1);
     rc_console = SDL_CreateRGBSurface(0, w, h, 32, 0, 0, 0, 0);
@@ -4094,10 +4095,17 @@ int rc_net_udp_sendData(int slot, string host, Uint16 port, string s_data)
 
     if(s_data.length()+1 > rc_packet_size)
     {
-        SDLNet_FreePacket(rc_udp_packet);
-        SDLNet_AllocPacket(s_data.length()+1);
-        rc_packet_size = s_data.length() + 1;
+        rc_packet_size = SDLNet_ResizePacket(rc_udp_packet, s_data.length()+1);
+        if(rc_packet_size < s_data.length())
+        {
+            cout << "UDP_SendData Error: " << SDLNet_GetError() << endl;
+            return 0;
+        }
     }
+
+
+    if(rc_udp_packet == NULL)
+        return 0;
 
 
     if (SDLNet_ResolveHost(&srvadd, host.c_str(), port) == -1)
@@ -4113,8 +4121,8 @@ int rc_net_udp_sendData(int slot, string host, Uint16 port, string s_data)
 
 
 	rc_udp_packet->len = s_data.length()+1;
-	//cout << "Data = " << (char*)rc_udp_packet->data << endl;
-	//cout << "Length = " << rc_udp_packet->len << endl;
+	//cout << "#Data = " << (char*)rc_udp_packet->data << endl;
+	//cout << "#Length = " << rc_udp_packet->len << endl;
 	SDLNet_UDP_Send(rc_udp_socket[slot], -1, rc_udp_packet);
 
     return 1;

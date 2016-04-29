@@ -1,20 +1,16 @@
-#include <android/log.h>
 //Using SDL and standard IO
-#include "SDL.h"
-#include "SDL_image.h"
-#include "SDL2_gfxPrimitives.h"
-#include "SDL_ttf.h"
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_image.h>
+#include <SDL2/SDL2_gfxPrimitives.h>
+#include <SDL2/SDL_ttf.h>
 #include <string>
+#include <sstream>
 #include <stdio.h>
 #include <iostream>
-#include "SDL_mixer.h"
-#include "SDL_net.h"
-#include "../SDL/src/core/android/SDL_android.h"
-
-//#include "../SDL/src/dynapi/SDL_dynapi_overrides.h"
-
-//#include "../soft_render/SDL_rotate.c"
-
+#include <SDL2/SDL_mixer.h>
+#include <SDL2/SDL_net.h>
+#include <string.h>
+#include <unistd.h>
 #include <assert.h>
 
 #include "theoraplay.h"
@@ -27,7 +23,7 @@ using namespace std;
 const int SCREEN_WIDTH = 640;
 const int SCREEN_HEIGHT = 480;
 
-const int MAX_WINDOWS = 1;  //8
+const int MAX_WINDOWS = 8;  //8
 const int MAX_SCREENS = 16; //32
 const int MAX_IMAGES = 32768; //65536;
 const int MAX_SPRITES = 32; //1024;
@@ -167,15 +163,13 @@ string rc_textinput_string = "";
 string rc_textinput_char = "";
 int rc_textinput_timer = 0;
 int rc_textinput_delay = 100;
-bool rc_textinput_flag = false;
+bool rc_textinput_flag = true;
 bool rc_textinput_isActive = false;
 int rc_textinput_waitHold = 800;
 bool rc_textinput_hold = false;
 
 
 static Uint32 baseticks = 0;
-double rc_mouse_scale_x = 0;
-double rc_mouse_scale_y = 0;
 
 typedef struct AudioQueue
 {
@@ -217,7 +211,7 @@ int rc_video_length = 0;
 int rc_video_fps = 0;
 int rc_video_currentLoop = 0;
 
-bool rc_media_init()
+bool rc_media_init(string rc_path)
 {
     for(int i = 0; i < MAX_SOUNDS; i++)
         rc_sound[i] = NULL;
@@ -232,10 +226,7 @@ bool rc_media_init()
         rc_win_id[i] = 0;
         rc_hconsole[i] = NULL;
         rc_backBuffer[i] = NULL;
-        rc_bb_rect[i].x = 0;
-        rc_bb_rect[i].y = 0;
-        rc_bb_rect[i].w = 0;
-        rc_bb_rect[i].h = 0;
+        rc_bb_rect[i] = {0, 0, 0, 0};
         for(int j = 0; j < MAX_SCREENS; j++)
         {
             rc_hscreen[i][j] = NULL;
@@ -251,7 +242,7 @@ bool rc_media_init()
     }
     for(int i = 0; i < MAX_IMAGES; i++)
     {
-		for(int w = 0; w < MAX_WINDOWS; w++)
+        for(int w = 0; w < MAX_WINDOWS; w++)
             rc_himage[i][w] = NULL;
 
         rc_simage[i] = NULL;
@@ -280,6 +271,11 @@ bool rc_media_init()
     {
         cout << "TTF Init Error: " << TTF_GetError() << endl;
         //return false;
+    }
+    else
+    {
+        string rc_open_font = rc_path + "FreeMono.ttf";
+        rc_console_font = TTF_OpenFont(rc_open_font.c_str(), 12);
     }
 
     if(Mix_OpenAudio(MIX_DEFAULT_FREQUENCY, MIX_DEFAULT_FORMAT, 2, 2048) < 0)
@@ -329,6 +325,9 @@ void rc_media_quit()
 {
     for(int i = 0; i < MAX_FONTS; i++)
         TTF_CloseFont(rc_draw_font[i]);
+
+    //cout << "Font closed" << endl;
+
     for(int i = 0; i < MAX_SOUNDS; i++)
     {
         Mix_FreeChunk(rc_sound[i]);
@@ -336,12 +335,13 @@ void rc_media_quit()
     }
     Mix_FreeMusic(rc_music);
     rc_music = NULL;
+
+    //cout << "Music Closed" << endl;
+
     for(int i = 0; i < MAX_WINDOWS; i++)
     {
-        SDL_DestroyWindow(rc_win[i]);
-        rc_win[i] = NULL;
-        SDL_DestroyRenderer(rc_win_renderer[i]);
-        rc_win_renderer[i] = NULL;
+
+        //cout << "Destroy Canvases" << endl;
 
         for(int j = 0; j < MAX_SCREENS; j++)
         {
@@ -354,16 +354,31 @@ void rc_media_quit()
             }
             if(rc_hscreen[i][j] != NULL)
             {
-            	SDL_DestroyTexture(rc_hscreen[i][j]);
+                SDL_DestroyTexture(rc_hscreen[i][j]);
             }
         }
+
+        //cout << "Destroy Images" << endl;
+
         for(int j = 0; j < MAX_IMAGES; j++)
         {
             SDL_DestroyTexture(rc_himage[j][i]);
             rc_himage[j][i] = NULL;
         }
+
+        //cout << "Destroy Window #" << i << endl;
+
+        if(rc_win[i] != NULL)
+        {
+            SDL_DestroyRenderer(rc_win_renderer[i]);
+            rc_win_renderer[i] = NULL;
+            SDL_DestroyWindow(rc_win[i]);
+            rc_win[i] = NULL;
+        }
     }
+
     //cout << "NORMAL BOOTS" << endl;
+
     if(audio)
     {
         THEORAPLAY_freeAudio(audio);
@@ -382,34 +397,27 @@ void rc_media_quit()
     IMG_Quit();
     TTF_Quit();
     Mix_Quit();
-    SDLNet_FreePacket(rc_udp_packet);
+    //SDLNet_FreePacket(rc_udp_packet);
 	SDLNet_Quit();
     SDL_Quit();
 }
 
-
-float rc_scale_x = 0;
-float rc_scale_y = 0;
-
-inline bool rc_media_openWindow_hw(int win_num, string caption, int x, int y, int w, int h, Uint32 flags)
+inline bool rc_media_openWindow_sw(int win_num, string caption, int x, int y, int w, int h, Uint32 flags)
 {
     if(win_num < 0 || win_num >= MAX_WINDOWS)
     {
         cout << "Window #" << win_num << " is not an available Window Slot" << endl;
-        exit(0);
         return false;
     }
     if(rc_win[win_num] != NULL)
     {
-        cout << "Window #" << win_num << " is currently open" << endl;
-        exit(0);
+        cout << "sWindow #" << win_num << " is currently open" << endl;
         return false;
     }
-    rc_win[win_num] = SDL_CreateWindow(caption.c_str(), 0, 0, w, h, SDL_WINDOW_SHOWN | SDL_WINDOW_FULLSCREEN_DESKTOP);
+    rc_win[win_num] = SDL_CreateWindow(caption.c_str(), x, y, w, h, SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
     if(rc_win[win_num] == NULL)
     {
         cout << "Error: " << SDL_GetError() << endl;
-        exit(0);
         return false;
     }
 
@@ -417,75 +425,146 @@ inline bool rc_media_openWindow_hw(int win_num, string caption, int x, int y, in
         rc_active_window = win_num;
 
     rc_win_surface[win_num] = SDL_GetWindowSurface(rc_win[win_num]);
-    //SDL_ConvertSurfaceFormat(rc_win_surface[win_num], SDL_PIXELFORMAT_ARGB8888, 0);
     rc_win_id[win_num] = SDL_GetWindowID(rc_win[win_num]);
-    //SDL_SetSurfaceRLE(rc_win_surface[win_num],1);
+    SDL_SetSurfaceRLE(rc_win_surface[win_num],1);
     rc_console = SDL_CreateRGBSurface(0, w, h, 32, 0, 0, 0, 0);
     SDL_SetColorKey(rc_console, SDL_TRUE, rc_clearColor);
 
-    if(rc_win_renderer[win_num] != NULL)
+    //rc_win_renderer[win_num] = SDL_CreateRenderer(rc_win[win_num], -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_TARGETTEXTURE);
+
+    //SDL_SetRenderDrawColor(rc_win_renderer[win_num], 0, 0, 0, 0);
+    //SDL_RenderClear(rc_win_renderer[win_num]);
+    //SDL_RenderPresent(rc_win_renderer[win_num]);
+    return true;
+}
+
+inline bool rc_media_openWindow_hw(int win_num, string caption, int x, int y, int w, int h, Uint32 flags)
+{
+    //cout << "start windowOpen" << endl;
+    if(win_num < 0 || win_num >= MAX_WINDOWS)
     {
-    	SDL_DestroyRenderer(rc_win_renderer[win_num]);
+        cout << "Window #" << win_num << " is not an available Window Slot" << endl;
+        return false;
     }
-    rc_win_renderer[win_num] = SDL_CreateRenderer(rc_win[win_num], -1, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_TARGETTEXTURE);
-    if(rc_win_renderer[win_num] == NULL)
+    if(rc_win[win_num] != NULL)
     {
-    	__android_log_write(ANDROID_LOG_ERROR, "My Ass Error: ", SDL_GetError());
-    	rc_win_renderer[win_num] = SDL_GetRenderer(rc_win[win_num]);
-    	if(rc_win_renderer[win_num] == NULL)
-    	{
-    		__android_log_write(ANDROID_LOG_ERROR, "Renderer Error: ", SDL_GetError());
-    		exit(0);
-    	}
-    	SDL_DestroyRenderer(rc_win_renderer[win_num]);
-    	rc_win_renderer[win_num] = NULL;
-    	rc_win_renderer[win_num] = SDL_CreateRenderer(rc_win[win_num], -1, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_TARGETTEXTURE);
-    	if(rc_win_renderer[win_num] == NULL)
-    	{
-    		__android_log_write(ANDROID_LOG_ERROR, "Renderer Error2: ", SDL_GetError());
-    		exit(0);
-    	}
+        cout << "Window #" << win_num << " is currently open" << endl;
+        return false;
     }
-    //SDL_RendererInfo * ren_info;
-    //SDL_GetRendererInfo(rc_win_renderer[win_num], ren_info);
-    //if(ren_info->flags & SDL_RENDERER_ACCELERATED)
-    //__android_log_write(ANDROID_LOG_ERROR,"RendererInfo: ", "ACCELERATED");
-    //SDL_RenderSetLogicalSize(rc_win_renderer[win_num],w,h);
-    //__android_log_print(ANDROID_LOG_ERROR, "RC_DEBUG", "Logical Size Error: %s", SDL_GetError());
+    if(flags == 0)
+        flags = SDL_WINDOW_SHOWN;
+    else if(flags == 1)
+        flags = SDL_WINDOW_SHOWN | SDL_WINDOW_FULLSCREEN_DESKTOP;
+    else if(flags == 2)
+        flags = SDL_WINDOW_SHOWN | SDL_WINDOW_BORDERLESS;
+    else if(flags == 3)
+        flags = SDL_WINDOW_HIDDEN;
+    rc_win[win_num] = SDL_CreateWindow(caption.c_str(), x, y, w, h, flags);
+    if(rc_win[win_num] == NULL)
+    {
+        cout << "Error: " << SDL_GetError() << endl;
+        return false;
+    }
+
+    if(rc_active_window == -1)
+        rc_active_window = win_num;
+
+    //rc_win_surface[win_num] = SDL_GetWindowSurface(rc_win[win_num]);
+    rc_win_id[win_num] = SDL_GetWindowID(rc_win[win_num]);
+
+    rc_win_width = w;
+    rc_win_height = h;
+    //SDL_SetSurfaceRLE(rc_win_surface[win_num],1);
+    //rc_console = SDL_CreateRGBSurface(0, w, h, 32, 0, 0, 0, 0);
+    //SDL_SetColorKey(rc_console, SDL_TRUE, rc_clearColor);
+    //cout << "boob physics" << endl;
+
+    rc_win_renderer[win_num] = SDL_CreateRenderer(rc_win[win_num], -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_TARGETTEXTURE);
+
+    if(rc_win_renderer[win_num]==NULL)
+    {
+        cout << "Renderer Error: " << SDL_GetError() << endl;
+    }
+
+    //cout << "booty" << endl;
+
+    for(int i = 0; i < MAX_IMAGES; i++)
+    {
+        if(rc_image_isLoaded[i])
+        {
+            for(int w = 0; w < MAX_WINDOWS; w++)
+            {
+                if(rc_win[w] != NULL)
+                {
+                    SDL_Surface * tmp_surf = SDL_CreateRGBSurface(0, rc_image_width[i], rc_image_height[i], 32, 0, 0, 0, 0);
+                    //cout << "ColorKey = " << (Uint32)rc_image_colorKey_r[i] << ", ";
+                    //cout << (Uint32)rc_image_colorKey_g[i] << ", ";
+                    //cout << (Uint32)rc_image_colorKey_b[i] << ", ";
+                    //cout << (Uint32)rc_image_colorKey_a[i] << endl;
+                    SDL_FillRect(tmp_surf, NULL, rc_image_colorKey[i]);
+                    SDL_SetRenderTarget(rc_win_renderer[w], NULL);
+                    SDL_Rect t_rect;
+                    t_rect.x = 0;
+                    t_rect.y = 0;
+                    t_rect.w = tmp_surf->w;
+                    t_rect.h = tmp_surf->h;
+                    Uint8 r, g, b, a;
+                    SDL_GetRenderDrawColor(rc_win_renderer[w], &r, &g, &b, &a);
+                    SDL_SetRenderDrawColor(rc_win_renderer[w], rc_image_colorKey_r[i], rc_image_colorKey_g[i], rc_image_colorKey_b[i], 255);
+                    SDL_RenderFillRect(rc_win_renderer[w], NULL);
+                    SDL_SetRenderDrawColor(rc_win_renderer[w], r, g, b, a);
+                    SDL_RenderCopy(rc_win_renderer[w], rc_himage[i][w], NULL, &t_rect);
+                    SDL_RenderReadPixels(rc_win_renderer[w],&t_rect,tmp_surf->format->format,tmp_surf->pixels,tmp_surf->pitch);
+                    SDL_SetColorKey(tmp_surf, SDL_TRUE, rc_image_colorKey[i]);
+                    rc_himage[i][w] = SDL_CreateTextureFromSurface(rc_win_renderer[w], tmp_surf);
+                    SDL_FreeSurface(tmp_surf);
+                    break;
+                }
+            }
+        }
+    }
+
+    //SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
+    //SDL_RenderSetLogicalSize(rc_win_renderer[win_num], w, h);
+
+    //cout << "boobs" << endl;
 
     rc_backBuffer[win_num] = SDL_CreateTexture(rc_win_renderer[win_num], rc_pformat->format, SDL_TEXTUREACCESS_TARGET, w, h);
-    //SDL_SetTextureBlendMode(rc_backBuffer[win_num],SDL_BLENDMODE_BLEND);
-
-    if(SDL_GetDesktopDisplayMode(0, &rc_displayMode[win_num])<0)
+    //cout << "dbg 1" << endl;
+    if(SDL_GetWindowDisplayMode(rc_win[win_num], &rc_displayMode[win_num])<0)
     {
         cout << "Something happend: " << SDL_GetError() << endl;
     }
-
+    //cout << "dbg 2" << endl;
     rc_bb_rect[win_num].x = 0;
     rc_bb_rect[win_num].y = 0;
-
+    //cout << "dbg 3" << endl;
     rc_bb_rect[win_num].w = rc_displayMode[win_num].w;
-
+    //cout << "dbg 4" << endl;
     rc_bb_rect[win_num].h = rc_displayMode[win_num].h;
 
-    rc_mouse_scale_x = (double)(w / rc_displayMode[win_num].w);
-    rc_mouse_scale_y = (double)(h / rc_displayMode[win_num].h);
+    //cout << "cunt" << endl;
+
+    rc_hconsole[win_num] = SDL_CreateTexture(rc_win_renderer[win_num],rc_pformat->format,SDL_TEXTUREACCESS_TARGET,w,h);
 
     rc_console_width[win_num] = w/8;
     rc_console_height[win_num] = h/8;
     rc_sConsole_x[win_num] = 0;
     rc_sConsole_y[win_num] = 0;
 
-    SDL_SetRenderTarget(rc_win_renderer[rc_active_window], rc_backBuffer[rc_active_window]);
-    SDL_SetRenderDrawColor(rc_win_renderer[rc_active_window], 0, 0, 0, 255);
-    SDL_RenderClear(rc_win_renderer[rc_active_window]);
-    SDL_SetRenderTarget(rc_win_renderer[rc_active_window], NULL);
-    SDL_RenderClear(rc_win_renderer[rc_active_window]);
-
+    SDL_SetRenderDrawColor(rc_win_renderer[win_num], 0, 0, 0, 0);
+    SDL_RenderClear(rc_win_renderer[win_num]);
     SDL_RenderPresent(rc_win_renderer[win_num]);
-    rc_win_width = w;
-    rc_win_height = h;
     return true;
+}
+
+inline void rc_media_closeWindow_sw(int win_num)
+{
+    SDL_DestroyRenderer(rc_win_renderer[win_num]);
+    if(rc_win[win_num]!=NULL)
+        SDL_DestroyWindow(rc_win[win_num]);
+    rc_win_renderer[win_num] = NULL;
+    rc_win[win_num] = NULL;
 }
 
 inline void rc_media_closeWindow_hw(int win_num)
@@ -627,8 +706,6 @@ void rc_media_setWindowSize(int win_num, int w, int h)
         SDL_SetWindowSize(rc_win[win_num], w, h);
         rc_bb_rect[win_num].w = w;
         rc_bb_rect[win_num].h = h;
-        rc_mouse_scale_x = 1;
-        rc_mouse_scale_y = 1;
         rc_win_width = w;
         rc_win_height = h;
     }
@@ -935,18 +1012,23 @@ void rc_media_openScreen_sw(int s_num, int w, int h, int vpx, int vpy, int vpw, 
 
 void rc_media_openScreen_hw(int s_num, int w, int h, int vpx, int vpy, int vpw, int vph, int flag)
 {
+    //cout << "start CanvasOpen in " << rc_active_window << ", " << s_num << endl;
     if(s_num < 0 || s_num > MAX_SCREENS)
     {
-        cout << "Screen #" << s_num << " is not available" << endl;
+        cout << "Canvas #" << s_num << " is not available" << endl;
         return;
     }
-    if(rc_sscreen[rc_active_window][s_num]!=NULL)
+    if(rc_hscreen[rc_active_window][s_num]!=NULL)
     {
-        cout << "Screen #" << s_num << " is already open" << endl;
+        cout << "Canvas #" << s_num << " is already open" << endl;
         return;
     }
+    //cout << "got to this point" << endl;
     rc_hscreen[rc_active_window][s_num] = SDL_CreateTexture(rc_win_renderer[rc_active_window], rc_pformat->format, SDL_TEXTUREACCESS_TARGET, w, h);
+    //cout << "hscreen texture created" << endl;
     rc_screen_transparent[rc_active_window][s_num] = 0;
+
+    //cout << "Canvas is created" << endl;
 
     switch(flag)
     {
@@ -962,6 +1044,9 @@ void rc_media_openScreen_hw(int s_num, int w, int h, int vpx, int vpy, int vpw, 
             //cout << "screen opened\n";
             break;
     }
+
+    //cout << "Flags are set" << endl;
+
     rc_screen_rect[rc_active_window][s_num].x = vpx;
     rc_screen_rect[rc_active_window][s_num].y = vpy;
     rc_screen_rect[rc_active_window][s_num].w = vpw;
@@ -977,6 +1062,8 @@ void rc_media_openScreen_hw(int s_num, int w, int h, int vpx, int vpy, int vpw, 
         rc_active_screen = s_num;
 
     SDL_SetRenderTarget(rc_win_renderer[rc_active_window], rc_hscreen[rc_active_window][rc_active_screen]);
+
+    //cout << "Canvas is open" << endl;
 }
 
 void rc_media_closeScreen_sw(int s_num)
@@ -1330,6 +1417,39 @@ void rc_media_setScreenZ(int z)
     }
 }
 
+void rc_media_box_sw(int x1, int y1, int x2, int y2)
+{
+    if(rc_screenCheck())
+    {
+        int s_lock = 0;
+        if(SDL_MUSTLOCK(rc_sscreen[rc_active_window][rc_active_screen]))
+        {
+            s_lock = 1;
+            SDL_LockSurface(rc_sscreen[rc_active_window][rc_active_screen]);
+        }
+        Uint32 * s_pixels = (Uint32*) rc_sscreen[rc_active_window][rc_active_screen]->pixels;
+        int pitch = rc_sscreen[rc_active_window][rc_active_screen]->pitch;
+        int w = rc_sscreen[rc_active_window][rc_active_screen]->w;
+        int x_inc = (x2-x1) / SDL_abs(x2-x1);
+        int y_inc = (y2-y1) / SDL_abs(y2-y1);
+        for(int y = y1; y != y2 + y_inc; y += y_inc)
+        {
+            for(int x = x1; x != x2 + x_inc; x += x_inc)
+            {
+                if(x == x1 || x == x2 || y == y1 || y == y2)
+                {
+                    //cout << "Draw " << x << " , " << y << endl;
+                    s_pixels[(y*w)+x] = rc_ink;
+                }
+            }
+        }
+        if(s_lock == 1)
+        {
+            SDL_UnlockSurface(rc_sscreen[rc_active_window][rc_active_screen]);
+        }
+    }
+}
+
 void rc_media_box_hw(int x1, int y1, int x2, int y2)
 {
     if(rc_screenCheck())
@@ -1402,11 +1522,104 @@ void rc_media_roundRectFill(int x, int y, int w, int h, int r)
     }
 }
 
+void rc_media_circle_sw(int xc, int yc, int r)
+{
+    if(rc_screenCheck())
+    {
+        int s_lock = 0;
+        if(SDL_MUSTLOCK(rc_sscreen[rc_active_window][rc_active_screen]))
+        {
+            s_lock = 1;
+            SDL_LockSurface(rc_sscreen[rc_active_window][rc_active_screen]);
+        }
+        Uint32 * s_pixels = (Uint32*) rc_sscreen[rc_active_window][rc_active_screen]->pixels;
+        int pitch = rc_sscreen[rc_active_window][rc_active_screen]->pitch;
+        int w = rc_sscreen[rc_active_window][rc_active_screen]->w;
+
+        int x = 0;
+        int y = r;
+        int p = 3 - 2 * r;
+        if (!r)
+            return;
+        while (y >= x) // only formulate 1/8 of circle
+        {
+            s_pixels[(yc-y)*w + (xc-x)] = rc_ink; //upper left left
+            s_pixels[(yc-x)*w + (xc-y)] = rc_ink; //upper upper left
+            s_pixels[(yc-x)*w + (xc+y)] = rc_ink; //upper upper right
+            s_pixels[(yc-y)*w + (xc+x)] = rc_ink; //upper right right
+            s_pixels[(yc+y)*w + (xc-x)] = rc_ink; //lower left left
+            s_pixels[(yc+x)*w + (xc-y)] = rc_ink; //lower lower left
+            s_pixels[(yc+x)*w + (xc+y)] = rc_ink; //lower lower right
+            s_pixels[(yc+y)*w + (xc+x)] = rc_ink; //lower right right
+            if (p < 0)
+                p += 4*x++ + 6;
+            else
+                p += 4*(x++ - y--) + 10;
+        }
+
+        if(s_lock == 1)
+        {
+            SDL_UnlockSurface(rc_sscreen[rc_active_window][rc_active_screen]);
+        }
+    }
+}
+
 void rc_media_circle_hw(int xc, int yc, int r)
 {
     if(rc_screenCheck())
     {
         circleRGBA(rc_win_renderer[rc_active_window], xc, yc, r, rc_ink >> 16, rc_ink >> 8, rc_ink, rc_ink >> 24);
+    }
+}
+
+void rc_media_circleFill_sw(int xc, int yc, int r)
+{
+    if(rc_screenCheck())
+    {
+        int s_lock = 0;
+        if(SDL_MUSTLOCK(rc_sscreen[rc_active_window][rc_active_screen]))
+        {
+            s_lock = 1;
+            SDL_LockSurface(rc_sscreen[rc_active_window][rc_active_screen]);
+        }
+        Uint32 * s_pixels = (Uint32*) rc_sscreen[rc_active_window][rc_active_screen]->pixels;
+        int pitch = rc_sscreen[rc_active_window][rc_active_screen]->pitch;
+        int w = rc_sscreen[rc_active_window][rc_active_screen]->w;
+
+        int x = r;
+        int y = 0;
+        int xChange = 1 - (r << 1);
+        int yChange = 0;
+        int radiusError = 0;
+
+        while (x >= y)
+        {
+            for (int i = xc - x; i <= xc + x; i++)
+            {
+                s_pixels[(yc+y)*w + i] = rc_ink; // (i, yc + y);
+                s_pixels[(yc-y)*w + i] = rc_ink; // (i, yc - y);
+            }
+            for (int i = xc - y; i <= xc + y; i++)
+            {
+                s_pixels[(yc+x)*w + i] = rc_ink; // (i, yc + x);
+                s_pixels[(yc-x)*w + i] = rc_ink; // (i, yc - x);
+            }
+
+            y++;
+            radiusError += yChange;
+            yChange += 2;
+            if (((radiusError << 1) + xChange) > 0)
+            {
+                x--;
+                radiusError += xChange;
+                xChange += 2;
+            }
+        }
+
+        if(s_lock == 1)
+        {
+            SDL_UnlockSurface(rc_sscreen[rc_active_window][rc_active_screen]);
+        }
     }
 }
 
@@ -1419,11 +1632,115 @@ void rc_media_circleFill_hw(int xc, int yc, int r)
     }
 }
 
+void rc_media_ellipse_sw(int xc, int yc, int width, int height)
+{
+    if(rc_screenCheck())
+    {
+        int s_lock = 0;
+        if(SDL_MUSTLOCK(rc_sscreen[rc_active_window][rc_active_screen]))
+        {
+            s_lock = 1;
+            SDL_LockSurface(rc_sscreen[rc_active_window][rc_active_screen]);
+        }
+        Uint32 * s_pixels = (Uint32*) rc_sscreen[rc_active_window][rc_active_screen]->pixels;
+        int pitch = rc_sscreen[rc_active_window][rc_active_screen]->pitch;
+        int w = rc_sscreen[rc_active_window][rc_active_screen]->w;
+
+        int a2 = width * width;
+        int b2 = height * height;
+        int fa2 = 4 * a2, fb2 = 4 * b2;
+        int x, y, sigma;
+
+        /* first half */
+        for (x = 0, y = height, sigma = 2*b2+a2*(1-2*height); b2*x <= a2*y; x++)
+        {
+            s_pixels[(yc+y)*w + (xc+x)] = rc_ink; //(xc + x, yc + y);
+            s_pixels[(yc+y)*w + (xc-x)] = rc_ink; // (xc - x, yc + y);
+            s_pixels[(yc-y)*w + (xc+x)] = rc_ink; // (xc + x, yc - y);
+            s_pixels[(yc-y)*w + (xc-x)] = rc_ink; // (xc - x, yc - y);
+            if (sigma >= 0)
+            {
+                sigma += fa2 * (1 - y);
+                y--;
+            }
+            sigma += b2 * ((4 * x) + 6);
+        }
+
+        /* second half */
+        for (x = width, y = 0, sigma = 2*a2+b2*(1-2*width); a2*y <= b2*x; y++)
+        {
+            s_pixels[(yc+y)*w + (xc+x)] = rc_ink; // (xc + x, yc + y);
+            s_pixels[(yc+y)*w + (xc-x)] = rc_ink; // (xc - x, yc + y);
+            s_pixels[(yc-y)*w + (xc+x)] = rc_ink; // (xc + x, yc - y);
+            s_pixels[(yc-y)*w + (xc-x)] = rc_ink; // (xc - x, yc - y);
+            if (sigma >= 0)
+            {
+                sigma += fb2 * (1 - x);
+                x--;
+            }
+            sigma += a2 * ((4 * y) + 6);
+        }
+
+        if(s_lock == 1)
+        {
+            SDL_UnlockSurface(rc_sscreen[rc_active_window][rc_active_screen]);
+        }
+    }
+}
+
 void rc_media_ellipse_hw(int xc, int yc, int width, int height)
 {
     if(rc_screenCheck())
     {
         ellipseRGBA(rc_win_renderer[rc_active_window], xc, yc, width, height, rc_ink >> 16, rc_ink >> 8, rc_ink, rc_ink>>24);
+    }
+}
+
+void rc_media_ellipseFill_sw(int xc, int yc, int width, int height)
+{
+    if(rc_screenCheck())
+    {
+        int s_lock = 0;
+        if(SDL_MUSTLOCK(rc_sscreen[rc_active_window][rc_active_screen]))
+        {
+            s_lock = 1;
+            SDL_LockSurface(rc_sscreen[rc_active_window][rc_active_screen]);
+        }
+        Uint32 * s_pixels = (Uint32*) rc_sscreen[rc_active_window][rc_active_screen]->pixels;
+        int pitch = rc_sscreen[rc_active_window][rc_active_screen]->pitch;
+        int w = rc_sscreen[rc_active_window][rc_active_screen]->w;
+
+        int hh = height * height;
+        int ww = width * width;
+        int hhww = hh * ww;
+        int x0 = width;
+        int dx = 0;
+
+        // do the horizontal diameter
+        for (int x = -width; x <= width; x++)
+            s_pixels[yc*w + (xc+x)] = rc_ink; // (xc + x, yc);
+
+        // now do both halves at the same time, away from the diameter
+        for (int y = 1; y <= height; y++)
+        {
+            int x1 = x0 - (dx - 1);  // try slopes of dx - 1 or more
+            for ( ; x1 > 0; x1--)
+                if (x1*x1*hh + y*y*ww <= hhww)
+                    break;
+            dx = x0 - x1;  // current approximation of the slope
+            x0 = x1;
+
+            for (int x = -x0; x <= x0; x++)
+            {
+                s_pixels[(yc-y)*w + (xc+x)] = rc_ink; // (xc + x, yc - y);
+                s_pixels[(yc+y)*w + (xc+x)] = rc_ink; // (xc + x, yc + y);
+            }
+        }
+
+        if(s_lock == 1)
+        {
+            SDL_UnlockSurface(rc_sscreen[rc_active_window][rc_active_screen]);
+        }
     }
 }
 
@@ -1435,13 +1752,19 @@ void rc_media_ellipseFill_hw(int xc, int yc, int width, int height)
     }
 }
 
+Uint32 rc_media_getPixel_sw(int x, int y)
+{
+    Uint32 * s_pixels = (Uint32*) rc_win_surface[rc_active_window]->pixels;
+    return s_pixels[y*rc_win_surface[rc_active_window]->w+x];
+}
+
 Uint32 rc_media_getPixel_hw(int x, int y)
 {
     //Uint32 * s_pixels = (Uint32*) rc_win_surface[rc_active_window]->pixels;
     SDL_SetRenderTarget(rc_win_renderer[rc_active_window], NULL);
     //cout << "surface = ( " << rc_win_surface[rc_active_window]->w << ", " << rc_win_surface[rc_active_window]->h << " ) " << endl;
     Uint32 * s_pixels = (Uint32*)SDL_malloc(sizeof(Uint32) * (rc_win_surface[rc_active_window]->w * rc_win_surface[rc_active_window]->h));
-    SDL_RenderReadPixels(rc_win_renderer[rc_active_window], NULL, rc_win_surface[rc_active_window]->format->format, (void*)s_pixels, rc_win_surface[rc_active_window]->pitch);
+    SDL_RenderReadPixels(rc_win_renderer[rc_active_window], NULL, rc_pformat->format, (void*)s_pixels, rc_win_surface[rc_active_window]->pitch);
     Uint32 p_color =  s_pixels[y*rc_win_surface[rc_active_window]->w+x];
     //cout << "color = " << p_color << endl;
     SDL_free(s_pixels);
@@ -1475,6 +1798,49 @@ Uint32 rc_media_rgba(Uint8 r, Uint8 g, Uint8 b, Uint8 a)
     Uint32 rgba_map = (Uint32)SDL_MapRGBA(rc_pformat,r,g,b,a);
     //rgba_map = rgba_map + (a<<24);
     return rgba_map;
+}
+
+void rc_media_line_sw(int x1, int y1, int x2, int y2)
+{
+    if(rc_screenCheck())
+    {
+        int s_lock = 0;
+        if(SDL_MUSTLOCK(rc_sscreen[rc_active_window][rc_active_screen]))
+        {
+            s_lock = 1;
+            SDL_LockSurface(rc_sscreen[rc_active_window][rc_active_screen]);
+        }
+        Uint32 * s_pixels = (Uint32*) rc_sscreen[rc_active_window][rc_active_screen]->pixels;
+        int pitch = rc_sscreen[rc_active_window][rc_active_screen]->pitch;
+        int w = rc_sscreen[rc_active_window][rc_active_screen]->w;
+
+        int dx =  abs(x2-x1), sx = x1<x2 ? 1 : -1;
+        int dy = -abs(y2-y1), sy = y1<y2 ? 1 : -1;
+        int err = dx+dy, e2; /* error value e_xy */
+
+        for(;;)
+        {  /* loop */
+            s_pixels[y1*w+x1] = rc_ink;// (x1,y1);
+            if (x1==x2 && y1==y2)
+                break;
+            e2 = 2*err;
+            if (e2 >= dy)
+            {
+                err += dy;
+                x1 += sx;
+            } /* e_xy+e_x > 0 */
+            if (e2 <= dx)
+            {
+                err += dx;
+                y1 += sy;
+            } /* e_xy+e_y < 0 */
+        }
+
+        if(s_lock == 1)
+        {
+            SDL_UnlockSurface(rc_sscreen[rc_active_window][rc_active_screen]);
+        }
+    }
 }
 
 void rc_media_line_hw(int x1, int y1, int x2, int y2)
@@ -1572,12 +1938,65 @@ void rc_media_floodFill_hw(int x, int y)
     }
 }
 
+void rc_media_drawPixel_sw(int x, int y)
+{
+    if(rc_screenCheck())
+    {
+        int s_lock = 0;
+        if(SDL_MUSTLOCK(rc_sscreen[rc_active_window][rc_active_screen]))
+        {
+            s_lock = 1;
+            SDL_LockSurface(rc_sscreen[rc_active_window][rc_active_screen]);
+        }
+        Uint32 * s_pixels = (Uint32*) rc_sscreen[rc_active_window][rc_active_screen]->pixels;
+        int pitch = rc_sscreen[rc_active_window][rc_active_screen]->pitch;
+        int w = rc_sscreen[rc_active_window][rc_active_screen]->w;
+
+        s_pixels[y*w+x] = rc_ink;
+
+        if(s_lock == 1)
+        {
+            SDL_UnlockSurface(rc_sscreen[rc_active_window][rc_active_screen]);
+        }
+    }
+}
+
 void rc_media_drawPixel_hw(int x, int y)
 {
     if(rc_screenCheck())
     {
         pixelRGBA(rc_win_renderer[rc_active_window], x, y, rc_ink_color.r, rc_ink_color.g, rc_ink_color.b, rc_ink_color.a);
     }
+}
+
+void rc_media_loadImage_sw(int slot, string img_file)
+{
+    if(slot < 0 || slot >= MAX_IMAGES)
+    {
+        cout << "LoadImage Error: Image Slot must be in the range of 0 to " << MAX_IMAGES << endl;
+        return;
+    }
+    if(rc_simage[slot]!=NULL)
+    {
+        cout << "LoadImage Error: Image Slot is already in use" << endl;
+        return;
+    }
+    SDL_Surface * image = IMG_Load(img_file.c_str());
+    if(image == NULL)
+    {
+        cout << "LoadImage Error: " << SDL_GetError() << endl;
+        return;
+    }
+    rc_simage[slot] = SDL_ConvertSurface(image, rc_win_surface[rc_active_window]->format,0);
+    if(rc_simage[slot] == NULL)
+    {
+        cout << "LoadImage Error: " << SDL_GetError() << endl;
+        SDL_FreeSurface(image);
+        return;
+    }
+    //if(rc_colorKey_switch == 1)
+    //    SDL_SetColorKey(rc_simage[slot],SDL_TRUE,rc_colorKey);
+    SDL_FreeSurface(image);
 }
 
 void rc_media_loadImage_hw(int slot, string img_file)
@@ -1589,29 +2008,43 @@ void rc_media_loadImage_hw(int slot, string img_file)
     }
     if(rc_himage[slot][rc_active_window]!=NULL)
     {
-        cout << "LoadImage Error: Image Slot is already in use" << endl;
+        cout << "LoadImage Error: Image " << slot << " is already in use" << endl;
         return;
     }
     SDL_Surface * image = IMG_Load(img_file.c_str());
     if(image == NULL)
     {
+        cout << "Image: " << img_file << endl;
         cout << "LoadImage Error: " << SDL_GetError() << endl;
         return;
     }
-    SDL_Surface * image_cv = SDL_ConvertSurfaceFormat(image, rc_pformat->format, 0);
-    rc_image_width[slot] = image->w;
-    rc_image_height[slot] = image->h;
+    SDL_Surface * image_cv = SDL_ConvertSurface(image, rc_pformat,0);
+    rc_image_width[slot] = image_cv->w;
+    rc_image_height[slot] = image_cv->h;
+    rc_image_isLoaded[slot] = true;
     if(image_cv == NULL)
     {
         cout << "LoadImage Error: " << SDL_GetError() << endl;
         SDL_FreeSurface(image);
         return;
     }
-
-    SDL_DestroyTexture(rc_himage[slot][rc_active_window]);
-    rc_himage[slot][rc_active_window] = SDL_CreateTextureFromSurface(rc_win_renderer[rc_active_window], image_cv);
-    SDL_SetTextureBlendMode(rc_himage[slot][rc_active_window], SDL_BLENDMODE_BLEND);
-
+    //if(rc_colorKey_switch == 1)
+    //    SDL_SetColorKey(rc_simage[slot],SDL_TRUE,rc_colorKey);
+    for(int i = 0; i < MAX_WINDOWS; i++)
+    {
+        SDL_DestroyTexture(rc_himage[slot][i]);
+        rc_himage[slot][i] = SDL_CreateTextureFromSurface(rc_win_renderer[i], image_cv);
+        SDL_SetTextureBlendMode(rc_himage[slot][i], SDL_BLENDMODE_BLEND);
+        if(i == rc_active_window && rc_himage[slot][rc_active_window] == NULL)
+        {
+            cout << "#LoadImage Error: " << SDL_GetError() << endl;
+            SDL_FreeSurface(image);
+            SDL_FreeSurface(image_cv);
+            for(int j = 0; j < i; j++)
+                SDL_DestroyTexture(rc_himage[slot][j]);
+            return;
+        }
+    }
     SDL_FreeSurface(image);
     SDL_FreeSurface(image_cv);
 }
@@ -1631,25 +2064,38 @@ void rc_media_loadImage_ex_hw(int slot, string img_file, double color)
     SDL_Surface * image = IMG_Load(img_file.c_str());
     if(image == NULL)
     {
+        cout << "Image: " << img_file << endl;
         cout << "LoadImage Error: " << SDL_GetError() << endl;
         return;
     }
-    SDL_Surface * image_cv = SDL_ConvertSurfaceFormat(image, rc_pformat->format, 0);
-    rc_image_width[slot] = image->w;
-    rc_image_height[slot] = image->h;
+    SDL_Surface * image_cv = SDL_ConvertSurface(image, rc_pformat,0);
+    rc_image_width[slot] = image_cv->w;
+    rc_image_height[slot] = image_cv->h;
+    rc_image_isLoaded[slot] = true;
     if(image_cv == NULL)
     {
         cout << "LoadImage Error: " << SDL_GetError() << endl;
         SDL_FreeSurface(image);
         return;
     }
-
     SDL_SetColorKey(image_cv, SDL_TRUE, (Uint32)color);
-
-    SDL_DestroyTexture(rc_himage[slot][rc_active_window]);
-    rc_himage[slot][rc_active_window] = SDL_CreateTextureFromSurface(rc_win_renderer[rc_active_window], image_cv);
-    SDL_SetTextureBlendMode(rc_himage[slot][rc_active_window], SDL_BLENDMODE_BLEND);
-
+    //if(rc_colorKey_switch == 1)
+    //    SDL_SetColorKey(rc_simage[slot],SDL_TRUE,rc_colorKey);
+    for(int i = 0; i < MAX_WINDOWS; i++)
+    {
+        SDL_DestroyTexture(rc_himage[slot][i]);
+        rc_himage[slot][i] = SDL_CreateTextureFromSurface(rc_win_renderer[i], image_cv);
+        SDL_SetTextureBlendMode(rc_himage[slot][i], SDL_BLENDMODE_BLEND);
+        if(i == rc_active_window && rc_himage[slot][rc_active_window] == NULL)
+        {
+            cout << "#LoadImage Error: " << SDL_GetError() << endl;
+            SDL_FreeSurface(image);
+            SDL_FreeSurface(image_cv);
+            for(int j = 0; j < i; j++)
+                SDL_DestroyTexture(rc_himage[slot][j]);
+            return;
+        }
+    }
     SDL_FreeSurface(image);
     SDL_FreeSurface(image_cv);
 }
@@ -1672,16 +2118,18 @@ void rc_media_createImage_hw(int slot, int w, int h, double * pdata, int pdata_s
     {
         img_pixels[i] = (Uint32)pdata[i];
     }
-
-    SDL_DestroyTexture(rc_himage[slot][rc_active_window]);
-    rc_himage[slot][rc_active_window] = SDL_CreateTextureFromSurface(rc_win_renderer[rc_active_window], img_surf);
-    SDL_SetTextureBlendMode(rc_himage[slot][rc_active_window], SDL_BLENDMODE_BLEND);
-
+    for(int i = 0; i < MAX_WINDOWS; i++)
+    {
+        SDL_DestroyTexture(rc_himage[slot][i]);
+        rc_himage[slot][i] = SDL_CreateTextureFromSurface(rc_win_renderer[i], img_surf);
+        SDL_SetTextureBlendMode(rc_himage[slot][i], SDL_BLENDMODE_BLEND);
+    }
     if(rc_himage[slot][rc_active_window] == NULL)
     {
         cout << "#LoadImage Error: " << SDL_GetError() << endl;
         SDL_FreeSurface(img_surf);
-        SDL_DestroyTexture(rc_himage[slot][rc_active_window]);
+        for(int j = 0; j < MAX_WINDOWS; j++)
+            SDL_DestroyTexture(rc_himage[slot][j]);
         return;
     }
     rc_image_width[slot] = img_surf->w;
@@ -1692,38 +2140,68 @@ void rc_media_createImage_hw(int slot, int w, int h, double * pdata, int pdata_s
 
 void rc_media_createImage_Ex_hw(int slot, int w, int h, double * pdata, double color, int pdata_size)
 {
-	if(rc_himage[slot][rc_active_window] != NULL)
-	{
-	    cout << "CreateImage Error: Image already exist" << endl;
-	    return;
-	}
-	if(pdata_size < (w*h))
-	{
-	    cout << "CreateImage Error: Buffer exceeds the size of pixel data" << endl;
-	    return;
-	}
-	SDL_Surface * img_surf = SDL_CreateRGBSurface(0, w, h, 32, 0, 0, 0, 0);
-	Uint32 * img_pixels = (Uint32*)img_surf->pixels;
-	for(int i = 0; i < (w*h); i++)
-	{
-	    img_pixels[i] = (Uint32)pdata[i];
-	}
-	SDL_SetColorKey(img_surf, SDL_TRUE, (Uint32)color);
-	SDL_DestroyTexture(rc_himage[slot][rc_active_window]);
-	rc_himage[slot][rc_active_window] = SDL_CreateTextureFromSurface(rc_win_renderer[rc_active_window], img_surf);
-	SDL_SetTextureBlendMode(rc_himage[slot][rc_active_window], SDL_BLENDMODE_BLEND);
+    if(rc_himage[slot][rc_active_window] != NULL)
+    {
+        cout << "CreateImage Error: Image already exist" << endl;
+        return;
+    }
+    if(pdata_size < (w*h))
+    {
+        cout << "CreateImage Error: Buffer exceeds the size of pixel data" << endl;
+        return;
+    }
+    SDL_Surface * img_surf = SDL_CreateRGBSurface(0, w, h, 32, 0, 0, 0, 0);
+    Uint32 * img_pixels = (Uint32*)img_surf->pixels;
+    for(int i = 0; i < (w*h); i++)
+    {
+        img_pixels[i] = (Uint32)pdata[i];
+    }
+    SDL_Surface * image_cv = SDL_ConvertSurface(img_surf, rc_pformat,0);
+    if(image_cv == NULL)
+    {
+        cout << "LoadImage Error: " << SDL_GetError() << endl;
+        SDL_FreeSurface(img_surf);
+        return;
+    }
+    if((Uint32)color<0)
+        SDL_SetColorKey(image_cv, SDL_TRUE, img_pixels[0]);
+    else
+        SDL_SetColorKey(image_cv, SDL_TRUE, (Uint32)color);
+    for(int i = 0; i < MAX_WINDOWS; i++)
+    {
+        SDL_DestroyTexture(rc_himage[slot][i]);
+        rc_himage[slot][i] = SDL_CreateTextureFromSurface(rc_win_renderer[i], image_cv);
+        SDL_SetTextureBlendMode(rc_himage[slot][i], SDL_BLENDMODE_BLEND);
+    }
+    if(rc_himage[slot][rc_active_window] == NULL)
+    {
+        cout << "#LoadImage Error: " << SDL_GetError() << endl;
+        SDL_FreeSurface(img_surf);
+        SDL_FreeSurface(image_cv);
+        for(int j = 0; j < MAX_WINDOWS; j++)
+            SDL_DestroyTexture(rc_himage[slot][j]);
+        return;
+    }
+    rc_image_width[slot] = image_cv->w;
+    rc_image_height[slot] = image_cv->h;
+    rc_image_isLoaded[slot] = true;
+    SDL_FreeSurface(img_surf);
+    SDL_FreeSurface(image_cv);
+}
 
-	if(rc_himage[slot][rc_active_window] == NULL)
-	{
-	    cout << "#LoadImage Error: " << SDL_GetError() << endl;
-	    SDL_FreeSurface(img_surf);
-	    SDL_DestroyTexture(rc_himage[slot][rc_active_window]);
-	    return;
-	}
-	rc_image_width[slot] = img_surf->w;
-	rc_image_height[slot] = img_surf->h;
-	rc_image_isLoaded[slot] = true;
-	SDL_FreeSurface(img_surf);
+void rc_media_colorKey_sw(int slot, double color)
+{
+    Uint32 c = (Uint32) color;
+    if(color < 0)
+    {
+        Uint32 * img_pixels = (Uint32*) rc_simage[slot]->pixels;
+        c = img_pixels[0];
+        SDL_SetColorKey(rc_simage[slot],SDL_TRUE,c);
+    }
+    else
+    {
+        SDL_SetColorKey(rc_simage[slot],SDL_TRUE,c);
+    }
 }
 
 void rc_media_colorKey_hw(int slot, double color)
@@ -1734,19 +2212,29 @@ void rc_media_colorKey_hw(int slot, double color)
     Uint8 b = c;
     Uint8 a = c >> 24;
     //c = SDL_MapRGBA(rc_win_surface[0]->format,r,g,b,255);
-    if(color > 0)
+    SDL_Rect img_rect;
+    img_rect.x = 0;
+    img_rect.y = 0;
+    img_rect.w = rc_image_width[slot];
+    img_rect.h = rc_image_height[slot];
+    if(color >= 0)
     {
         //return;
         SDL_RendererFlip rf = (SDL_RendererFlip)(SDL_FLIP_VERTICAL);
 
         SDL_Surface * tmp_surf = SDL_CreateRGBSurface(0, rc_image_width[slot], rc_image_height[slot], 32, 0, 0, 0, 0);
         SDL_Texture * tmp_tex = SDL_CreateTexture(rc_win_renderer[rc_active_window], rc_pformat->format, SDL_TEXTUREACCESS_TARGET, rc_image_width[slot], rc_image_height[slot]);
-        SDL_SetRenderTarget(rc_win_renderer[rc_active_window],tmp_tex);
-        //SDL_RenderCopy(rc_win_renderer[rc_active_window],rc_himage[slot][rc_active_window],NULL,NULL);
-        SDL_RenderCopyEx(rc_win_renderer[rc_active_window],rc_himage[slot][rc_active_window],NULL,NULL,0,NULL,rf);
+        SDL_SetRenderTarget(rc_win_renderer[rc_active_window],NULL);
+        SDL_RenderCopy(rc_win_renderer[rc_active_window],rc_himage[slot][rc_active_window],NULL,&img_rect);
+        //SDL_RenderCopyEx(rc_win_renderer[rc_active_window],rc_himage[slot][rc_active_window],NULL,NULL,0,NULL,rf);
 
-        SDL_RenderReadPixels(rc_win_renderer[rc_active_window], NULL, rc_pformat->format,tmp_surf->pixels,tmp_surf->pitch);
+        SDL_RenderReadPixels(rc_win_renderer[rc_active_window], &img_rect, rc_pformat->format,tmp_surf->pixels,tmp_surf->pitch);
         //cout << "Colorkey = " << (Uint32)r << ", " << (Uint32)g << ", " << (Uint32)b << ", " << (Uint32)a << endl;
+        rc_image_colorKey[slot] = c;
+        rc_image_colorKey_r[slot] = c >> 16;
+        rc_image_colorKey_g[slot] = c >> 8;
+        rc_image_colorKey_b[slot] = c;
+        rc_image_colorKey_a[slot] = c >> 24;
         SDL_SetColorKey(tmp_surf,SDL_TRUE,c);
 
         for(int i = 0; i < MAX_WINDOWS; i++)
@@ -1763,17 +2251,20 @@ void rc_media_colorKey_hw(int slot, double color)
         SDL_RendererFlip rf = (SDL_RendererFlip)(SDL_FLIP_VERTICAL);
 
         SDL_Surface * tmp_surf = SDL_CreateRGBSurface(0, rc_image_width[slot], rc_image_height[slot], 32, 0, 0, 0, 0);
-        //SDL_Surface * tmp_surf = SDL_ConvertSurfaceFormat(tmp_psurf, rc_pformat->format, 0);
-        //SDL_FreeSurface(tmp_psurf);
         SDL_Texture * tmp_tex = SDL_CreateTexture(rc_win_renderer[rc_active_window], rc_pformat->format, SDL_TEXTUREACCESS_TARGET, rc_image_width[slot], rc_image_height[slot]);
-        SDL_SetRenderTarget(rc_win_renderer[rc_active_window],tmp_tex);
-        //SDL_RenderCopy(rc_win_renderer[rc_active_window],rc_himage[slot][rc_active_window],NULL,NULL);
-        SDL_RenderCopyEx(rc_win_renderer[rc_active_window],rc_himage[slot][rc_active_window],NULL,NULL,0,NULL,rf);
+        SDL_SetRenderTarget(rc_win_renderer[rc_active_window],NULL);
+        SDL_RenderCopy(rc_win_renderer[rc_active_window],rc_himage[slot][rc_active_window],NULL,&img_rect);
+        //SDL_RenderCopyEx(rc_win_renderer[rc_active_window],rc_himage[slot][rc_active_window],NULL,NULL,0,NULL,rf);
 
-        SDL_RenderReadPixels(rc_win_renderer[rc_active_window], NULL, SDL_PIXELFORMAT_ABGR8888,tmp_surf->pixels,tmp_surf->pitch);
+        SDL_RenderReadPixels(rc_win_renderer[rc_active_window], &img_rect, rc_pformat->format,tmp_surf->pixels,tmp_surf->pitch);
         //cout << "Colorkey = " << (Uint32)r << ", " << (Uint32)g << ", " << (Uint32)b << ", " << (Uint32)a << endl;
-        Uint32 * gcolor = (Uint32*)tmp_surf->pixels;
-        c = gcolor[0];
+        Uint32 * pxl = (Uint32*)tmp_surf->pixels;
+        c = pxl[0];
+        rc_image_colorKey[slot] = c;
+        rc_image_colorKey_r[slot] = c >> 16;
+        rc_image_colorKey_g[slot] = c >> 8;
+        rc_image_colorKey_b[slot] = c;
+        rc_image_colorKey_a[slot] = c >> 24;
         SDL_SetColorKey(tmp_surf,SDL_TRUE,c);
 
         for(int i = 0; i < MAX_WINDOWS; i++)
@@ -1785,6 +2276,18 @@ void rc_media_colorKey_hw(int slot, double color)
         SDL_DestroyTexture(tmp_tex);
         SDL_FreeSurface(tmp_surf);
     }
+}
+
+void rc_media_deleteImage_sw(int slot)
+{
+    if(slot < 0 || slot >= MAX_IMAGES)
+    {
+        cout << "DeleteImage Error: Image Slot must be in the range of 0 to " << MAX_IMAGES-1 << endl;
+        return;
+    }
+    if(rc_simage[slot]==NULL)
+        return;
+    SDL_FreeSurface(rc_simage[slot]);
 }
 
 void rc_media_deleteImage_hw(int slot)
@@ -1804,6 +2307,21 @@ void rc_media_deleteImage_hw(int slot)
     rc_image_isLoaded[slot] = false;
     rc_image_width[slot] = 0;
     rc_image_height[slot] = 0;
+}
+
+void rc_media_setImageAlpha_sw(int slot, Uint8 alpha)
+{
+    if(slot < 0 || slot >= MAX_IMAGES)
+    {
+        cout << "SetImageAlpha Error: Image Slot must be in the range of 0 to " << MAX_IMAGES-1 << endl;
+        return;
+    }
+    if(rc_simage[slot]==NULL)
+    {
+        cout << "SetImageAlpha Error: Image Slot is empty" << endl;
+        return;
+    }
+    SDL_SetSurfaceAlphaMod(rc_simage[slot], alpha);
 }
 
 void rc_media_setImageAlpha_hw(int slot, Uint8 alpha)
@@ -1844,6 +2362,22 @@ void rc_media_getImageAlpha_hw(int slot, double * alpha)
     *alpha = (double)a;
 }
 
+void rc_media_getImageSize_sw(int slot, double * w, double * h)
+{
+    if(slot < 0 || slot >= MAX_IMAGES)
+    {
+        cout << "GetImageSize Error: Image Slot must be in the range of 0 to " << MAX_IMAGES-1 << endl;
+        return;
+    }
+    if(rc_himage[slot][rc_active_window]==NULL)
+    {
+        cout << "GetImageSize Error: Image Slot is empty" << endl;
+        return;
+    }
+    *w = rc_simage[slot]->w;
+    *h = rc_simage[slot]->h;
+}
+
 void rc_media_getImageSize_hw(int slot, double * w, double * h)
 {
     if(slot < 0 || slot >= MAX_IMAGES)
@@ -1854,15 +2388,28 @@ void rc_media_getImageSize_hw(int slot, double * w, double * h)
     if(rc_himage[slot][rc_active_window]==NULL)
     {
         cout << "GetImageSize Error: Image Slot is empty" << endl;
-        *w = 0;
-        *h = 0;
         return;
     }
-    Uint32 format = 0;
-    int access = 0, width = 0, height = 0;
-    SDL_QueryTexture(rc_himage[slot][rc_active_window], &format, &access, &width, &height);
-    *w = width;
-    *h = height;
+    *w = rc_image_width[slot];
+    *h = rc_image_height[slot];
+}
+
+void rc_media_copyImage_sw(int src_slot, int dst_slot)
+{
+    if(src_slot < 0 || src_slot >= MAX_IMAGES || dst_slot < 0 || dst_slot >= MAX_IMAGES)
+    {
+        cout << "CopyImage Error: Image Slot should be in the range of 0 to " << MAX_IMAGES-1 << endl;
+        return;
+    }
+    if(rc_simage[src_slot]!=NULL && rc_simage[dst_slot]==NULL)
+    {
+        rc_simage[dst_slot] = SDL_ConvertSurface(rc_simage[src_slot], rc_simage[src_slot]->format, 0);
+    }
+    else
+    {
+        cout << "CopyImage Error: Image slot could not be used" << endl;
+        return;
+    }
 }
 
 void rc_media_copyImage_hw(int src_slot, int dst_slot)
@@ -2129,6 +2676,10 @@ void rc_media_locate(int x, int y)
     rc_sConsole_y[rc_active_window] = y;
 }
 
+void rc_media_printS_sw(string txt)
+{
+}
+
 string rc_fillSpace(int n)
 {
     string s = "";
@@ -2172,9 +2723,6 @@ void rc_media_cls()
 {
     if(rc_winCheck(rc_active_window))
     {
-        SDL_SetRenderTarget(rc_win_renderer[rc_active_window], rc_backBuffer[rc_active_window]);
-        SDL_SetRenderDrawColor(rc_win_renderer[rc_active_window], 0, 0, 0, 255);
-        SDL_RenderClear(rc_win_renderer[rc_active_window]);
         SDL_SetRenderTarget(rc_win_renderer[rc_active_window], NULL);
         SDL_RenderClear(rc_win_renderer[rc_active_window]);
         SDL_SetRenderTarget(rc_win_renderer[rc_active_window], rc_hscreen[rc_active_window][rc_active_screen]);
@@ -2183,7 +2731,7 @@ void rc_media_cls()
 
 void rc_media_printS_hw(string txt)
 {
-    SDL_SetRenderTarget(rc_win_renderer[rc_active_window], rc_backBuffer[rc_active_window]);
+    SDL_SetRenderTarget(rc_win_renderer[rc_active_window], NULL);
 
     string tc = txt;
     string t_out[rc_console_height[rc_active_window]];
@@ -2216,14 +2764,72 @@ void rc_media_printS_hw(string txt)
 
     rc_sConsole_y[rc_active_window] += i;
 
-    SDL_SetRenderTarget(rc_win_renderer[rc_active_window], NULL);
-    SDL_RenderCopy(rc_win_renderer[rc_active_window],rc_backBuffer[rc_active_window],NULL,NULL);
-
     SDL_RenderPresent(rc_win_renderer[rc_active_window]);
-
-    if(rc_active_screen >= 0)
-    	SDL_SetRenderTarget(rc_win_renderer[rc_active_window], rc_hscreen[rc_active_window][rc_active_screen]);
+    if(rc_active_screen>=0)
+        SDL_SetRenderTarget(rc_win_renderer[rc_active_window], rc_hscreen[rc_active_window][rc_active_screen]);
     return;
+}
+
+string rc_media_inputS_sw(string prompt)
+{
+    SDL_Surface * input_surface = NULL;
+    bool loop = true;
+    SDL_Event in_evt;
+    string in_buf = prompt;
+    string rtn_string = "";
+    SDL_Rect src, dst;
+    src.x = 0;
+    src.y = 0;
+    src.h = 8;
+    dst.x = 8*rc_sConsole_x[rc_active_window];
+    dst.y = 8*rc_sConsole_y[rc_active_window];
+    dst.h = 8;
+    SDL_Rect input_rect;
+    input_rect.x = 8*rc_sConsole_x[rc_active_window];
+    input_rect.y = 8*rc_sConsole_y[rc_active_window];
+    input_rect.w = prompt.length()*8;
+    input_rect.h = 8;
+    while(loop)
+    {
+        if(SDL_PollEvent(&in_evt))
+        {
+            switch(in_evt.type)
+            {
+                case SDL_TEXTINPUT:
+                    in_buf += in_evt.text.text;
+                    break;
+                case SDL_KEYDOWN:
+                    switch(in_evt.key.keysym.sym)
+                    {
+                        case SDLK_RETURN:
+                            loop = false;
+                            break;
+                        case SDLK_BACKSPACE:
+                            if(in_buf.length()-1 >= prompt.length() && in_buf.length()-1 >= 0)
+                                in_buf = in_buf.substr(0, in_buf.length()-1);
+                            break;
+                    }
+            }
+        }
+        if(in_buf.length()>0)
+        {
+            input_surface = TTF_RenderText_Solid(rc_console_font, in_buf.c_str(), rc_console_pen);
+            src.w = input_surface->w;
+            dst.w = input_surface->w;
+            if(input_surface->w > input_rect.w)
+                input_rect.w = dst.w;
+            if(input_surface->h > input_rect.h)
+                input_rect.h = input_surface->h;
+            SDL_FillRect(rc_console, &input_rect, rc_clearColor);
+            SDL_BlitSurface(input_surface, NULL, rc_console, &dst);
+            SDL_FillRect(rc_win_surface[rc_active_window], NULL, rc_clearColor);
+            SDL_BlitSurface(rc_console, NULL, rc_win_surface[rc_active_window], NULL);
+            SDL_FreeSurface(input_surface);
+            SDL_UpdateWindowSurface(rc_win[rc_active_window]);
+        }
+    }
+    //rc_cursorY++;
+    return in_buf.substr(prompt.length());
 }
 
 string rc_media_inputS_hw(string prompt)
@@ -2246,18 +2852,10 @@ string rc_media_inputS_hw(string prompt)
     sub_line.y = (rc_sConsole_y[rc_active_window]+1) * 8;
     sub_line.w = 0;
     sub_line.h = 8;
-    SDL_SetRenderTarget(rc_win_renderer[rc_active_window], rc_backBuffer[rc_active_window]);
-    SDL_Rect txt_rect;
-    txt_rect = first_line;
-    txt_rect.w = 128;
-    txt_rect.h = 128;
-    //SDL_SetTextInputRect(&txt_rect);
-
-    SDL_StartTextInput();
-
+    SDL_SetRenderTarget(rc_win_renderer[rc_active_window], NULL);
     while(loop)
     {
-        while(SDL_PollEvent(&in_evt))
+        if(SDL_WaitEvent(&in_evt))
         {
             switch(in_evt.type)
             {
@@ -2279,7 +2877,6 @@ string rc_media_inputS_hw(string prompt)
         }
         if(in_buf.length()>0)
         {
-        	SDL_SetRenderTarget(rc_win_renderer[rc_active_window],rc_backBuffer[rc_active_window]);
             tc = in_buf;
             i = 0;
             int x = rc_sConsole_x[rc_active_window];
@@ -2322,7 +2919,7 @@ string rc_media_inputS_hw(string prompt)
                     break;
             }
 
-            SDL_SetRenderDrawColor(rc_win_renderer[rc_active_window], rc_clearColor>>16, rc_clearColor>>8, rc_clearColor, 255);
+            SDL_SetRenderDrawColor(rc_win_renderer[rc_active_window], rc_clearColor>>16, rc_clearColor>>8, rc_clearColor, rc_clearColor>>24);
             SDL_RenderFillRect(rc_win_renderer[rc_active_window], &first_line);
 
             if(((i-1)*8) > sub_line.h)
@@ -2335,18 +2932,14 @@ string rc_media_inputS_hw(string prompt)
 
             for(int n = 0; n < i; n++)
             {
-                stringRGBA(rc_win_renderer[rc_active_window], 0, (rc_sConsole_y[rc_active_window] + n) * 8, t_out[n].c_str(), rc_ink_color.r, rc_ink_color.g, rc_ink_color.b, 255);//rc_ink_color.a);
+                stringRGBA(rc_win_renderer[rc_active_window], 0, (rc_sConsole_y[rc_active_window] + n) * 8, t_out[n].c_str(), rc_ink_color.r, rc_ink_color.g, rc_ink_color.b, rc_ink_color.a);
             }
-            SDL_SetRenderTarget(rc_win_renderer[rc_active_window],NULL);
-            SDL_RenderCopy(rc_win_renderer[rc_active_window],rc_backBuffer[rc_active_window],NULL,NULL);
             SDL_RenderPresent(rc_win_renderer[rc_active_window]);
         }
     }
-    SDL_StopTextInput();
     rc_sConsole_y[rc_active_window] += i;
     rc_sConsole_x[rc_active_window] = 0;
-    if(rc_active_screen >= 0)
-    	SDL_SetRenderTarget(rc_win_renderer[rc_active_window],rc_hscreen[rc_active_window][rc_active_screen]);
+    SDL_SetRenderTarget(rc_win_renderer[rc_active_window],rc_hscreen[rc_active_window][rc_active_screen]);
     return in_buf.substr(prompt.length());
 }
 
@@ -2367,10 +2960,9 @@ string rc_media_ZoneInputS_hw(int x, int y, int w, int h)
     zone.w = w;
     zone.h = h;
     SDL_SetRenderTarget(rc_win_renderer[rc_active_window], NULL);
-    SDL_StartTextInput();
     while(loop)
     {
-        if(SDL_PollEvent(&in_evt))
+        if(SDL_WaitEvent(&in_evt))
         {
             switch(in_evt.type)
             {
@@ -2414,7 +3006,6 @@ string rc_media_ZoneInputS_hw(int x, int y, int w, int h)
                     break;
             }
 
-            SDL_SetRenderTarget(rc_win_renderer[rc_active_window], rc_backBuffer[rc_active_window]);
             SDL_SetRenderDrawColor(rc_win_renderer[rc_active_window], rc_clearColor>>16, rc_clearColor>>8, rc_clearColor, rc_clearColor>>24);
             SDL_RenderFillRect(rc_win_renderer[rc_active_window], &zone);
 
@@ -2429,12 +3020,9 @@ string rc_media_ZoneInputS_hw(int x, int y, int w, int h)
                 stringRGBA(rc_win_renderer[rc_active_window], x, y + (n * 8), t_out[n].c_str(), rc_ink_color.r, rc_ink_color.g, rc_ink_color.b, rc_ink_color.a);
             }
 
-            SDL_SetRenderTarget(rc_win_renderer[rc_active_window], NULL);
-            SDL_RenderCopy(rc_win_renderer[rc_active_window], rc_backBuffer[rc_active_window], NULL, NULL);
             SDL_RenderPresent(rc_win_renderer[rc_active_window]);
         }
     }
-    SDL_StopTextInput();
     SDL_SetRenderTarget(rc_win_renderer[rc_active_window],rc_hscreen[rc_active_window][rc_active_screen]);
     return in_buf;
 }
@@ -2471,6 +3059,20 @@ void rc_media_DeleteFont(int slot)
     if(rc_draw_font[slot] != NULL)
         TTF_CloseFont(rc_draw_font[slot]);
     rc_draw_font[slot] = NULL;
+}
+
+void rc_media_drawText_sw(string text, int x, int y)
+{
+    if(rc_draw_font[rc_active_font] == NULL)
+        return;
+    SDL_Surface * rendered_text = TTF_RenderText_Solid(rc_draw_font[rc_active_font], text.c_str(), rc_ink_color);
+    SDL_Rect pos;
+    pos.x = x;
+    pos.y = y;
+    pos.w = rendered_text->w;
+    pos.h = rendered_text->h;
+    SDL_BlitSurface(rendered_text, NULL, rc_sscreen[rc_active_window][rc_active_screen], &pos);
+    SDL_FreeSurface(rendered_text);
 }
 
 void rc_media_drawText_hw(string text, int x, int y)
@@ -2607,6 +3209,7 @@ int rc_getEvents()
     }
     SDL_Event event;
     int g_events = SDL_PollEvent(&event);
+    //int g_events = SDL_WaitEvent(&event);
     switch(event.type)
     {
         case SDL_QUIT:
@@ -2630,23 +3233,24 @@ int rc_getEvents()
                     rc_media_clearScreen_sw();
                     break;
                 case SDL_WINDOWEVENT_CLOSE:
+                    SDL_PumpEvents();
                     //rc_media_quit();
                     exit(0);
                     break;
             }
             break;
         case SDL_TEXTINPUT:
-            if(rc_textinput_flag == true || !rc_textinput_isActive)
+            if(rc_textinput_flag == true)
             {
-                //cout << "NO GO" << endl;
-                break;
+                rc_textinput_string += event.text.text;
+                rc_textinput_flag = true;
+                //cout << "TEXT = " << rc_textinput_string << endl;
             }
-            rc_textinput_string += event.text.text;
             rc_textinput_flag = true;
-            //cout << "TEXT = " << rc_textinput_string << endl;
             break;
         case SDL_KEYUP:
             rc_inkey = 0;
+            rc_textinput_flag = true;
             break;
         case SDL_KEYDOWN:
             if(rc_textinput_isActive && event.key.keysym.sym == SDLK_BACKSPACE && rc_textinput_string.length() > 0
@@ -2669,6 +3273,19 @@ int rc_getEvents()
             rc_mbutton1 = 0;
             rc_mbutton2 = 0;
             rc_mbutton3 = 0;
+            break;
+            switch(event.button.button)
+            {
+                case SDL_BUTTON_LEFT:
+                    rc_mbutton1 = 1;
+                    break;
+                case SDL_BUTTON_MIDDLE:
+                    rc_mbutton2 = 1;
+                    break;
+                case SDL_BUTTON_RIGHT:
+                    rc_mbutton3 = 1;
+                    break;
+            }
             break;
         case SDL_MOUSEBUTTONDOWN:
             SDL_GetMouseState(&rc_mouseX, &rc_mouseY);
@@ -2812,6 +3429,7 @@ void rc_media_ReadInput_Start()
     SDL_StartTextInput();
     rc_textinput_isActive = true;
     rc_textinput_string = "";
+    rc_textinput_timer = clock() / (double)(CLOCKS_PER_SEC / 1000);
 }
 
 void rc_media_ReadInput_Stop()
@@ -2835,7 +3453,7 @@ void rc_media_ReadInput_SetText(string txt)
 int rc_media_inkey()
 {
     int k = rc_inkey;
-    //rc_inkey = 0;
+    rc_inkey = 0;
     return k;
 //    while(rc_getEvents())
 //    {
@@ -2907,9 +3525,9 @@ void rc_media_getMouse(double * x, double * y, double * mb1, double * mb2, doubl
     *mb1 = rc_mbutton1;
     *mb2 = rc_mbutton2;
     *mb3 = rc_mbutton3;
-    //int x_data, y_data;
-    *x = rc_mouseX * rc_mouse_scale_x;
-    *y = rc_mouseY * rc_mouse_scale_y;
+    int x_data, y_data;
+    *x = rc_mouseX;
+    *y = rc_mouseY;
     return;
 //    while(rc_getEvents())
 //    {
@@ -2965,12 +3583,30 @@ void rc_media_getMouseWheel(double * x_axis, double * y_axis)
 //    rc_mwheely = 0;
 }
 
+void rc_media_updateWindow_sw()
+{
+    int s_num = 0;
+    SDL_FillRect(rc_win_surface[rc_active_window], NULL, rc_clearColor);
+    for(int i = MAX_SCREENS-1; i >= 0; i--)
+    {
+        s_num = rc_screen_zOrder[rc_active_window][i];
+        if(rc_sscreen[rc_active_window][s_num] != NULL)
+        {
+            //cout << "screen #" << s_num << "   i = " << i << endl;
+            //cout << "BLT: #" << s_num << " -> " << rc_screenview[0][s_num].x << " " << rc_screenview[0][s_num].y << " " << rc_screenview[0][s_num].w << " " << rc_screenview[0][s_num].h << endl;
+            SDL_BlitSurface(rc_sscreen[rc_active_window][s_num], &rc_screenview[rc_active_window][s_num], rc_win_surface[rc_active_window], &rc_screen_rect[rc_active_window][s_num]);
+            //rc_media_updateSprites_sw(s_num);
+        }
+    }
+    if(SDL_UpdateWindowSurface(rc_win[rc_active_window]) < 0)
+        cout << "UpdateWindow Error: " << SDL_GetError() << endl;
+}
+
 void rc_media_updateWindow_hw()
 {
     int s_num = 0;
     SDL_SetRenderTarget(rc_win_renderer[rc_active_window], rc_backBuffer[rc_active_window]);
     SDL_SetRenderDrawColor(rc_win_renderer[rc_active_window], rc_clearColor >> 16, rc_clearColor >> 8, rc_clearColor, 255);
-    //SDL_RenderClear(rc_win_renderer[rc_active_window]);
     SDL_RenderFillRect(rc_win_renderer[rc_active_window], NULL);
     for(int i = MAX_SCREENS-1; i >= 0; i--)
     {
@@ -2982,7 +3618,7 @@ void rc_media_updateWindow_hw()
         }
     }
     SDL_SetRenderTarget(rc_win_renderer[rc_active_window], NULL);
-    SDL_RenderCopy(rc_win_renderer[rc_active_window], rc_backBuffer[rc_active_window], NULL, NULL);
+    SDL_RenderCopy(rc_win_renderer[rc_active_window], rc_backBuffer[rc_active_window], &rc_bb_rect[rc_active_window], NULL);
     SDL_RenderPresent(rc_win_renderer[rc_active_window]);
     SDL_SetRenderTarget(rc_win_renderer[rc_active_window], rc_hscreen[rc_active_window][rc_active_screen]);
     SDL_SetRenderDrawColor(rc_win_renderer[rc_active_window], rc_ink_color.r, rc_ink_color.g, rc_ink_color.b, rc_ink_color.a);
@@ -3008,9 +3644,16 @@ void rc_auto_hw()
     }
 }
 
+bool rc_media_imageExist_sw(int slot)
+{
+    if(rc_simage[slot] == NULL)
+        return false;
+    return true;
+}
+
 bool rc_media_imageExist_hw(int slot)
 {
-    if(rc_himage[slot][rc_active_window] == NULL)
+    if(rc_himage[slot][0] == NULL)
         return false;
     return true;
 }
@@ -3383,6 +4026,11 @@ void rc_net_tcp_sendData(int socket, const char * data, int numBytes)
 bool rc_net_tcp_acceptSocket(int socket_server, int socket_client)
 {
     //cout << "\n\nthis is a test\n\n";
+    if(rc_socket[socket_server] == NULL)
+    {
+        //cout << "no server" << endl;
+        return false;
+    }
     bool val = (rc_socket[socket_client] = SDLNet_TCP_Accept(rc_socket[socket_server]));
     //cout << "cp1\n";
     return val;
@@ -3628,7 +4276,7 @@ void rc_media_loadVideo(string fname)
     if(!decoder)
     {
         decoder = NULL;
-        __android_log_print(ANDROID_LOG_ERROR, "RC_DEBUG","LOADVIDEO_FAILED: ");
+        cout << "Failed to load video: " << fname << endl;
         return;
     }
 
@@ -3672,7 +4320,7 @@ int rc_media_getVideoStats(string fname, double * v_len, double * v_fps, double 
     if(!decoder)
     {
         decoder = NULL;
-        __android_log_print(ANDROID_LOG_ERROR, "RC_DEBUG","LOADVIDEO_FAILED");
+        cout << "Failed to load video: " << fname << endl;
         return 0;
     }
 
@@ -3783,15 +4431,8 @@ void rc_cleanResume()
 
 void rc_media_playVideo(int loops)
 {
-	__android_log_print(ANDROID_LOG_ERROR, "RC_DEBUG","PLAYVIDEO_START");
-    if(!decoder)
-    {
-    	__android_log_print(ANDROID_LOG_ERROR, "RC_DEBUG","PLAYVIDEO_NOT_LOADED");
-    	return;
-    }
-	if(rc_video_isPlaying)
+    if(rc_video_isPlaying)
         return;
-    __android_log_print(ANDROID_LOG_ERROR, "RC_DEBUG","PLAYVIDEO_NOT_PLAYING");
     if(rc_video_reset)
     {
         //cout << "RESET" << endl;
@@ -3810,16 +4451,12 @@ void rc_media_playVideo(int loops)
     }
 
     //cout << "debug 1" << endl;
-    __android_log_print(ANDROID_LOG_ERROR, "RC_DEBUG","PLAYVIDEO_TST_0");
     Mix_CloseAudio();
     rc_video_loops = loops;
     rc_video_isPlaying = true;
     //cout << "debug 2" << endl;
 
-    __android_log_print(ANDROID_LOG_ERROR, "RC_DEBUG","PLAYVIDEO_TST_0.5");
-
-    SDL_memset(&spec, '\0', sizeof (SDL_AudioSpec));
-    __android_log_print(ANDROID_LOG_ERROR, "RC_DEBUG","PLAYVIDEO_TST_MEMSET");
+    memset(&spec, '\0', sizeof (SDL_AudioSpec));
     //cout << "debug 2.5" << endl;
     spec.freq = audio->freq;
     //cout << "debug 2.6" << endl;
@@ -3831,7 +4468,6 @@ void rc_media_playVideo(int loops)
     //initfailed = quit = (initfailed || (SDL_OpenAudio(&spec, NULL) != 0));
     //cout << "quit = " << quit << endl;
     //cout<< "debug 3" << endl;
-    __android_log_print(ANDROID_LOG_ERROR, "RC_DEBUG","PLAYVIDEO_TST1");
     if(SDL_OpenAudio(&spec, NULL) < 0)
     {
         rc_audio_isOpen = false;
@@ -3844,26 +4480,22 @@ void rc_media_playVideo(int loops)
         return;
     }
     rc_audio_isOpen = true;
-    __android_log_print(ANDROID_LOG_ERROR, "RC_DEBUG","PLAYVIDEO_TST2");
     //cout << "debug 4" << endl;
 
     if(!rc_video_isLoaded)
     {
         //cout << "GILLITEEN" <<endl;
-    	__android_log_print(ANDROID_LOG_ERROR, "RC_DEBUG","PLAYVIDEO_TST3");
         while (audio)
         {
             queue_audio(audio);
             audio = THEORAPLAY_getAudio(decoder);
         } // while
-        __android_log_print(ANDROID_LOG_ERROR, "RC_DEBUG","PLAYVIDEO_TST4");
     }
 
     baseticks = SDL_GetTicks();
     rc_video_isLoaded = true;
 
     //fprintf(stderr, "b_debug 3\n");
-    __android_log_print(ANDROID_LOG_ERROR, "RC_DEBUG","PLAYVIDEO_TST5");
 
     if (!quit)
         SDL_PauseAudio(0);
@@ -4060,8 +4692,6 @@ void rc_media_setVideoPosition(Uint32 vpos)
     audio = NULL;
     decoder = NULL;
     decoder = THEORAPLAY_startDecodeFile(rc_video_file.c_str(), 30, THEORAPLAY_VIDFMT_RGBA);
-    if(!decoder)
-    	return;
     while(!audio && !video && THEORAPLAY_isDecoding(decoder))
     {
         audio = THEORAPLAY_getAudio(decoder);
@@ -4117,17 +4747,12 @@ void rc_media_deleteVideo()
     rc_video_length = 0;
     rc_video_width = 0;
     rc_video_height = 0;
-    rc_video_dstrect.x = 0;
-    rc_video_dstrect.y = 0;
-    rc_video_dstrect.w = 0;
-    rc_video_dstrect.h = 0;
+    rc_video_dstrect = {0, 0, 0, 0};
     //cout << "mini" << endl;
 }
 
 void rc_media_pauseVideo()
 {
-	if(!decoder)
-		return;
     if(rc_video_isPaused)
         return;
     rc_video_isPlaying = false;
@@ -4151,8 +4776,6 @@ void rc_media_pauseVideo()
 
 void rc_media_resumeVideo()
 {
-	if(!decoder)
-		return;
     if(!rc_video_isPaused)
         return;
 
@@ -4234,15 +4857,11 @@ void rc_media_resumeVideo()
 
 bool rc_media_videoIsPlaying()
 {
-	if(!decoder)
-		return false;
     return rc_video_isPlaying;
 }
 
 bool rc_media_videoEnd()
 {
-	if(!decoder)
-		return true;
     return rc_video_end;
 }
 
