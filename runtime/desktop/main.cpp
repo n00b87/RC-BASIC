@@ -1,3 +1,6 @@
+#define RC_WINDOWS
+//#define RC_LINUX
+
 #include <iostream>
 #include <iomanip>
 #include <sstream>
@@ -11,8 +14,14 @@
 #include <sys/types.h>  //file system stuff
 #include <unistd.h>   //file system stuff
 #include <dirent.h>
+
+#ifdef RC_WINDOWS
+
 #include <tchar.h>
 #include <windows.h>
+
+#endif // RC_WINDOWS
+
 #include "rc_media.h"
 
 #define RC_EQUAL_FLAG 1
@@ -512,6 +521,14 @@
 #define SETENV_V_STR 69
 #define PREFPATH_STR_ORG_NAME_STR 70
 #define PREFPATH_STR_APP_NAME_STR 71
+#define NUMJOYHATS_JOY_NUM 401
+#define JOYHAT_JOY_NUM 402
+#define JOYHAT_HAT 403
+#define NUMJOYTRACKBALLS_JOY_NUM 404
+#define GETJOYTRACKBALL_JOY_NUM 405
+#define GETJOYTRACKBALL_BALL 406
+#define GETJOYTRACKBALL_DX 407
+#define GETJOYTRACKBALL_DY 408
 
 #define RC_LOOP_BREAK 50
 
@@ -572,9 +589,20 @@ unsigned int rc_vm_system_id[] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 unsigned char RC_PTR_TYPE = 0;
 
+#ifndef RC_WINDOWS
+
+struct dirent *rc_entry;
+DIR *rc_dir;
+string rc_dir_path = "";
+
+#else
+
 struct dirent *rc_entry;
 string rc_dir;
 string rc_dir_path = "";
+HANDLE hfind;
+
+#endif // RC_LINUX
 
 bool is_wend = false;
 bool loop_exit = false;
@@ -583,8 +611,6 @@ int exit_arg = 0;
 unsigned int w_condition = 0;
 
 int vm_data_size = 8;
-
-HANDLE hfind;
 
 bool rc_vm_isClean = false;
 
@@ -5281,6 +5307,89 @@ inline int rc_intern_freeFile()
     return 0;
 }
 
+#ifndef RC_WINDOWS
+inline int rc_intern_dirChange()
+{
+    if(chdir(rc_sid[CHANGEDIR_PATH_STR][0].c_str())!=0)
+    {
+        cout << "Error: Could not change directory\n";
+        return 2;
+    }
+    rc_dir_path = rc_sid[CHANGEDIR_PATH_STR][0];
+    return 0;
+}
+
+inline int rc_intern_dirExist()
+{
+    struct stat info;
+
+    if(stat( rc_sid[DIREXISTS_PATH_STR][0].c_str(), &info ) != 0)
+        return 0;
+    else if(info.st_mode & S_IFDIR)
+        return 1;
+    else
+        return 0;
+}
+
+inline string rc_intern_dirFirst ()
+{
+    rc_dir = opendir (rc_dir_path.c_str());
+    //string s = "";
+
+    if ((rc_entry = readdir (rc_dir)) != NULL)
+    {
+        //cout << "ERROR: " << rc_entry->d_name;
+        return rc_entry->d_name;
+    }
+    return "";
+}
+
+inline string rc_intern_dir()
+{
+    string d = get_current_dir_name();
+    if(d.compare("")==0)
+    {
+        cout << "Could not get current directory" << endl;
+        return "";
+    }
+    rc_dir_path = d;
+    return d;
+}
+
+inline string rc_intern_dirNext()
+{
+    if( (rc_entry = readdir(rc_dir))!=NULL)
+        return rc_entry->d_name;
+    return "";
+}
+
+inline int rc_intern_dirCreate()
+{
+    if(mkdir(rc_sid[MAKEDIR_PATH_STR][0].c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH)!=0)
+    {
+        cout << "ERROR: Could not make directory" << endl;
+        return 0;
+    }
+    return 1;
+}
+
+inline int rc_intern_dirDelete()
+{
+    if(rmdir(rc_sid[REMOVEDIR_PATH_STR][0].c_str())!=0)
+    {
+        cout << "ERROR: Could not delete directory" << endl;
+        return 0;
+    }
+    return 1;
+}
+
+inline string rc_intern_OS()
+{
+    return "LINUX";
+}
+
+#else
+
 inline int rc_intern_dirChange()
 {
     if(SetCurrentDirectory(rc_sid[CHANGEDIR_PATH_STR][0].c_str())==0)
@@ -5369,6 +5478,13 @@ inline int rc_intern_dirDelete()
     return 1;
 }
 
+inline string rc_intern_OS()
+{
+    return "WINDOWS";
+}
+
+#endif // RC_WINDOWS
+
 inline string rc_intern_date()
 {
     time_t t = time(0);   // get time now
@@ -5452,11 +5568,6 @@ int rc_getNSize(int nid)
     return 0;
 }
 
-inline string rc_intern_OS()
-{
-    return "WINDOWS";
-}
-
 inline string rc_intern_command(int num)
 {
     if(num < rc_cmd_count)
@@ -5481,7 +5592,7 @@ inline string rc_intern_env()
 
 inline int rc_intern_setEnv()
 {
-    return putenv(rc_sid[SETENV_V_STR][0].c_str());
+    return putenv((char *)rc_sid[SETENV_V_STR][0].c_str());
 }
 
 inline string rc_intern_prefPath()
@@ -6506,6 +6617,21 @@ inline void rc_vm_intern()
             rc_str_stack[rc_str_stack_index] = rc_intern_prefPath();
             rc_str_stack_index++;
             break;
+        case 294:
+            rc_num_stack[rc_num_stack_index] = rc_media_numJoyHats((int)rc_nid[NUMJOYHATS_JOY_NUM][0]);
+            rc_num_stack_index++;
+            break;
+        case 295:
+            rc_num_stack[rc_num_stack_index] = rc_media_joyHat((int)rc_nid[JOYHAT_JOY_NUM][0], (int)rc_nid[JOYHAT_HAT][0]);
+            rc_num_stack_index++;
+            break;
+        case 296:
+            rc_num_stack[rc_num_stack_index] = rc_media_numJoyTrackBalls((int)rc_nid[NUMJOYTRACKBALLS_JOY_NUM][0]);
+            rc_num_stack_index++;
+            break;
+        case 297:
+            rc_media_getJoyTrackBall((int)rc_nid[GETJOYTRACKBALL_JOY_NUM][0], (int)rc_nid[GETJOYTRACKBALL_BALL][0], &rc_nid[GETJOYTRACKBALL_DX][0], &rc_nid[GETJOYTRACKBALL_DY][0]);
+            break;
 
 
         default:
@@ -6923,7 +7049,9 @@ inline int rc_vm_run()
                 if(rc_checkEvent())
                 {
                     while(rc_getEvents()){}
-                    //SDL_PumpEvents();
+                    #ifndef RC_WINDOWS
+                        SDL_PumpEvents();
+                    #endif // RC_WINDOWS
                     SDL_FlushEvents(SDL_FIRSTEVENT, SDL_LASTEVENT);
                 }
                 rc_vm_f[i_val3] = rc_vm_stack.top();
@@ -7016,7 +7144,9 @@ inline int rc_vm_run()
                 if(rc_checkEvent())
                 {
                     while(rc_getEvents()){}
-                    //SDL_PumpEvents();
+                    #ifndef RC_WINDOWS
+                        SDL_PumpEvents();
+                    #endif // RC_WINDOWS
                     SDL_FlushEvents(SDL_FIRSTEVENT, SDL_LASTEVENT);
                 }
                 rc_vm_f[i_val3] = rc_vm_stack.top();
@@ -7121,6 +7251,9 @@ inline int rc_vm_run()
         //cout << "test out << " << rc_segment_getUShort(RC_CURRENT_SEGMENT,RC_CURRENT_ADDRESS) << endl;
         unsigned int w_err = 1;
 
+        Uint64 r_loop = 0;
+        int rc_text_len = rc_textinput_string.length();
+
 
         while(rc_vm_m[i]!=0)
         {
@@ -7129,12 +7262,22 @@ inline int rc_vm_run()
 
             RC_CURRENT_ADDRESS = st_addr;
 
-            rc_textinput_flag = false;
+            //rc_textinput_flag = false;
             cycleVideo();
             if(rc_checkEvent())
             {
+                //rc_textinput_flag = false;
                 while(rc_getEvents()){}
-                //SDL_PumpEvents();
+//                if(rc_textinput_string.length()!=rc_text_len)
+//                {
+//                    //cout << "loop [" << r_loop << "] string = " << rc_textinput_string << endl;
+//                    rc_text_len = rc_textinput_string.length();
+//                }
+//                r_loop++;
+                #ifndef RC_WINDOWS
+                    SDL_PumpEvents();
+                #endif // RC_WINDOWS
+                //SDL_FlushEvent(SDL_TEXTINPUT);
                 SDL_FlushEvents(SDL_FIRSTEVENT, SDL_LASTEVENT);
                 //SDL_Delay(5);
             }
@@ -7223,7 +7366,9 @@ inline int rc_vm_run()
             if(rc_checkEvent())
             {
                 while(rc_getEvents()){}
-                //SDL_PumpEvents();
+                #ifndef RC_WINDOWS
+                    SDL_PumpEvents();
+                #endif // RC_WINDOWS
                 SDL_FlushEvents(SDL_FIRSTEVENT, SDL_LASTEVENT);
             }
             while(true)
@@ -7404,8 +7549,11 @@ void rc_closeVM()
 
 void rc_runtime_clean()
 {
+    //cout << "START CLEAN" << endl;
     rc_media_quit();
+    //cout << "Media Close" << endl;
     rc_closeVM();
+    //cout << "VM Close" << endl;
     rc_vm_isClean = true;
     //cout << "CLEAN" << endl;
 }
@@ -7423,7 +7571,11 @@ int main(int argc, char * argv[])
 
     //These two line must be uncommented in final release--------------------
     string fname = argv[0];
-    fname = fname.substr(0, fname.find_last_of(".") ) + ".cbc";
+    #ifdef RC_WINDOWS
+        fname = fname.substr(0, fname.find_last_of(".") ) + ".cbc";
+    #else
+        fname = fname + ".cbc";
+    #endif
     //-------------------------------------------------------------------------
 
     //EDITOR CODE--------------------------------------------------
@@ -7478,9 +7630,7 @@ int main(int argc, char * argv[])
     {
         //cout << "file not open:" << fname << endl;
         //system("PAUSE");
-        if(argc > 1)
-            fname = argv[1];
-
+        fname = argv[1];
         rc_file.open(fname.c_str(), fstream::in | fstream::binary);
         if(!rc_file.is_open())
             return 0;
@@ -7655,9 +7805,14 @@ int main(int argc, char * argv[])
 
     int l = 0;
 
-    TCHAR buf[MAX_PATH];
-    GetCurrentDirectory(MAX_PATH, buf);
-    rc_dir_path = buf;
+    #ifdef RC_WINDOWS
+        TCHAR buf[MAX_PATH];
+        GetCurrentDirectory(MAX_PATH, buf);
+        rc_dir_path = buf;
+    #else
+        rc_dir_path = get_current_dir_name();
+    #endif // RC_WINDOWS
+
     //cout << rc_dir_path << endl; string s; cin >> s;
 
     string init_dir = (string)argv[0];

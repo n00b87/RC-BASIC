@@ -889,50 +889,6 @@ bool rc_screenCheck(int s_num = -1)
     return true;
 }
 
-void rc_media_openScreen_sw(int s_num, int w, int h, int vpx, int vpy, int vpw, int vph, int flag)
-{
-    if(s_num < 0 || s_num > MAX_SCREENS)
-    {
-        cout << "Screen #" << s_num << " is not available" << endl;
-        return;
-    }
-    if(rc_sscreen[rc_active_window][s_num]!=NULL)
-    {
-        cout << "Screen #" << s_num << " is already open" << endl;
-        return;
-    }
-    SDL_Surface * tmpSurf = SDL_CreateRGBSurface(0,w,h,32,0,0,0,0);
-    rc_sscreen[rc_active_window][s_num] = SDL_ConvertSurfaceFormat(tmpSurf, rc_win_surface[rc_active_window]->format->format,0);
-    SDL_FreeSurface(tmpSurf);
-    rc_screen_transparent[rc_active_window][s_num] = 0;
-    switch(flag)
-    {
-        case 1:
-            SDL_SetColorKey(rc_sscreen[rc_active_window][s_num], SDL_TRUE, rc_clearColor);
-            //SDL_SetColorKey(rc_sprite_layer[rc_active_window][s_num], SDL_TRUE, rc_clearColor);
-            rc_screen_transparent[rc_active_window][s_num] = 1;
-            SDL_SetSurfaceBlendMode(rc_sscreen[rc_active_window][s_num], SDL_BLENDMODE_BLEND);
-            //SDL_SetSurfaceBlendMode(rc_sprite_layer[rc_active_window][s_num], SDL_BLENDMODE_BLEND);
-            if(SDL_SetSurfaceRLE(rc_sscreen[rc_active_window][s_num],1) < 0 )
-                cout << "Surface RLE Error: " << SDL_GetError() << endl;
-            //SDL_SetSurfaceRLE(rc_sprite_layer[rc_active_window][s_num],1);
-            break;
-    }
-    rc_screen_rect[rc_active_window][s_num].x = vpx;
-    rc_screen_rect[rc_active_window][s_num].y = vpy;
-    rc_screen_rect[rc_active_window][s_num].w = vpw;
-    rc_screen_rect[rc_active_window][s_num].h = vph;
-    rc_screen_width[rc_active_window][s_num] = w;
-    rc_screen_height[rc_active_window][s_num] = h;
-    rc_screenview[rc_active_window][s_num].x = 0;
-    rc_screenview[rc_active_window][s_num].y = 0;
-    rc_screenview[rc_active_window][s_num].w = vpw;
-    rc_screenview[rc_active_window][s_num].h = vph;
-    rc_screen_visible[rc_active_window][s_num] = true;
-    if(rc_active_screen == -1)
-        rc_active_screen = s_num;
-}
-
 void rc_media_openScreen_hw(int s_num, int w, int h, int vpx, int vpy, int vpw, int vph, int flag)
 {
     if(s_num < 0 || s_num > MAX_SCREENS)
@@ -979,16 +935,6 @@ void rc_media_openScreen_hw(int s_num, int w, int h, int vpx, int vpy, int vpw, 
     SDL_SetRenderTarget(rc_win_renderer[rc_active_window], rc_hscreen[rc_active_window][rc_active_screen]);
 }
 
-void rc_media_closeScreen_sw(int s_num)
-{
-    if(rc_screenCheck(s_num))
-    {
-        //cout << "Free rc_sscreen[" << rc_active_window << "][" << s_num << "]\n";
-        SDL_FreeSurface(rc_sscreen[rc_active_window][s_num]);
-        rc_sscreen[rc_active_window][s_num] = NULL;
-    }
-}
-
 void rc_media_closeScreen_hw(int s_num)
 {
     if(rc_screenCheck(s_num))
@@ -996,14 +942,6 @@ void rc_media_closeScreen_hw(int s_num)
         SDL_DestroyTexture(rc_hscreen[rc_active_window][s_num]);
         rc_hscreen[rc_active_window][s_num] = NULL;
         rc_screen_visible[rc_active_window][s_num] = false;
-    }
-}
-
-void rc_media_screen_sw(int s_num)
-{
-    if(rc_screenCheck(s_num))
-    {
-        rc_active_screen = s_num;
     }
 }
 
@@ -1092,25 +1030,6 @@ void rc_media_getScreenSize(double * w, double * h)
     }
 }
 
-void rc_media_clearScreen_sw()
-{
-    if(rc_screenCheck())
-    {
-        //if(rc_screen_transparent[rc_active_window][rc_active_screen])
-        //{
-            //SDL_SetColorKey(rc_sscreen[rc_active_window][rc_active_screen], SDL_FALSE, rc_clearColor);
-            SDL_LockSurface(rc_sscreen[rc_active_window][rc_active_screen]);
-            SDL_FillRect(rc_sscreen[rc_active_window][rc_active_screen], &rc_screen_rect[rc_active_window][rc_active_screen], rc_clearColor);
-            SDL_UnlockSurface(rc_sscreen[rc_active_window][rc_active_screen]);
-            //SDL_SetColorKey(rc_sscreen[rc_active_window][rc_active_screen], SDL_TRUE, rc_clearColor);
-        //}
-        //else
-        //{
-            //SDL_FillRect(rc_sscreen[rc_active_window][rc_active_screen], &rc_screen_rect[rc_active_window][rc_active_screen], rc_clearColor);
-        //}
-    }
-}
-
 void rc_media_clearScreen_hw()
 {
     if(rc_screenCheck())
@@ -1126,36 +1045,11 @@ void rc_media_clearScreen_hw()
     }
 }
 
-void rc_media_setScreenAlpha_sw(Uint8 alpha)
-{
-    if(rc_screenCheck())
-    {
-        SDL_SetSurfaceAlphaMod(rc_sscreen[rc_active_window][rc_active_screen], alpha);
-    }
-}
-
 void rc_media_setScreenAlpha_hw(Uint8 alpha)
 {
     if(rc_screenCheck())
     {
         SDL_SetTextureAlphaMod(rc_hscreen[rc_active_window][rc_active_screen], alpha);
-    }
-}
-
-void rc_media_copyScreen_sw(int src_screen, int sx, int sy, int sw, int sh, int dst_screen, int dx, int dy)
-{
-    if(rc_screenCheck(src_screen) && rc_screenCheck(dst_screen))
-    {
-        SDL_Rect src_rect, dst_rect;
-        src_rect.x = sx;
-        src_rect.y = sy;
-        src_rect.w = sw;
-        src_rect.h = sh;
-        dst_rect.x = dx;
-        dst_rect.y = dy;
-        dst_rect.w = sw;
-        dst_rect.h = sh;
-        SDL_BlitSurface(rc_sscreen[rc_active_window][src_screen], &src_rect, rc_sscreen[rc_active_window][dst_screen], &dst_rect);
     }
 }
 
@@ -1250,21 +1144,6 @@ void rc_media_getWindowClip_hw(int slot, int sx, int sy, int sw, int sh)
 
     SDL_FreeSurface(img_surf);
     SDL_SetRenderTarget(rc_win_renderer[rc_active_window], rc_hscreen[rc_active_window][rc_active_screen]);
-}
-
-void rc_media_cloneScreen_sw(int src_screen, int dst_screen)
-{
-    if(rc_screenCheck(src_screen) && (dst_screen >= 0 && dst_screen < MAX_SCREENS))
-    {
-        if(rc_sscreen[rc_active_window][dst_screen] == NULL)
-        {
-            rc_sscreen[rc_active_window][dst_screen] = rc_sscreen[rc_active_window][src_screen];
-            rc_screen_width[rc_active_window][dst_screen] = rc_screen_width[rc_active_window][src_screen];
-            rc_screen_height[rc_active_window][dst_screen] = rc_screen_height[rc_active_window][src_screen];
-            rc_screen_rect[rc_active_window][dst_screen] = rc_screen_rect[rc_active_window][src_screen];
-            rc_screenview[rc_active_window][dst_screen] = rc_screenview[rc_active_window][src_screen];
-        }
-    }
 }
 
 void rc_media_cloneScreen_hw(int src_screen, int dst_screen)
@@ -2626,8 +2505,6 @@ int rc_getEvents()
                             break;
                         }
                     }
-                    rc_win_surface[rc_active_window] = SDL_GetWindowSurface(rc_win[rc_active_window]);
-                    rc_media_clearScreen_sw();
                     break;
                 case SDL_WINDOWEVENT_CLOSE:
                     //rc_media_quit();
@@ -3087,6 +2964,30 @@ int rc_media_numJoyButtons(int joy_num)
 int rc_media_numJoyAxes(int joy_num)
 {
     return SDL_JoystickNumAxes(rc_joystick[joy_num]);
+}
+
+int rc_media_numJoyHats(int joy_num)
+{
+    return SDL_JoystickNumHats(rc_joystick[joy_num]);
+}
+
+int rc_media_joyHat(int joy_num, int hat)
+{
+    return SDL_JoystickGetHat(rc_joystick[joy_num], hat);
+}
+
+int rc_media_numJoyTrackBalls(int joy_num)
+{
+    return SDL_JoystickNumBalls(rc_joystick[joy_num]);
+}
+
+void rc_media_getJoyTrackBall(int joy_num, int ball, double * dx, double * dy)
+{
+    int x = 0;
+    int y = 0;
+    SDL_JoystickGetBall(rc_joystick[joy_num], ball, &x, &y);
+    *dx = x;
+    *dy = y;
 }
 
 void rc_media_loadSound(int slot, string fname)
@@ -3783,7 +3684,7 @@ void rc_cleanResume()
 
 void rc_media_playVideo(int loops)
 {
-	__android_log_print(ANDROID_LOG_ERROR, "RC_DEBUG","PLAYVIDEO_START");
+	//__android_log_print(ANDROID_LOG_ERROR, "RC_DEBUG","PLAYVIDEO_START");
     if(!decoder)
     {
     	__android_log_print(ANDROID_LOG_ERROR, "RC_DEBUG","PLAYVIDEO_NOT_LOADED");
@@ -3791,7 +3692,7 @@ void rc_media_playVideo(int loops)
     }
 	if(rc_video_isPlaying)
         return;
-    __android_log_print(ANDROID_LOG_ERROR, "RC_DEBUG","PLAYVIDEO_NOT_PLAYING");
+    //__android_log_print(ANDROID_LOG_ERROR, "RC_DEBUG","PLAYVIDEO_NOT_PLAYING");
     if(rc_video_reset)
     {
         //cout << "RESET" << endl;
@@ -3810,16 +3711,16 @@ void rc_media_playVideo(int loops)
     }
 
     //cout << "debug 1" << endl;
-    __android_log_print(ANDROID_LOG_ERROR, "RC_DEBUG","PLAYVIDEO_TST_0");
+    //__android_log_print(ANDROID_LOG_ERROR, "RC_DEBUG","PLAYVIDEO_TST_0");
     Mix_CloseAudio();
     rc_video_loops = loops;
     rc_video_isPlaying = true;
     //cout << "debug 2" << endl;
 
-    __android_log_print(ANDROID_LOG_ERROR, "RC_DEBUG","PLAYVIDEO_TST_0.5");
+    //__android_log_print(ANDROID_LOG_ERROR, "RC_DEBUG","PLAYVIDEO_TST_0.5");
 
     SDL_memset(&spec, '\0', sizeof (SDL_AudioSpec));
-    __android_log_print(ANDROID_LOG_ERROR, "RC_DEBUG","PLAYVIDEO_TST_MEMSET");
+    //__android_log_print(ANDROID_LOG_ERROR, "RC_DEBUG","PLAYVIDEO_TST_MEMSET");
     //cout << "debug 2.5" << endl;
     spec.freq = audio->freq;
     //cout << "debug 2.6" << endl;
@@ -3831,7 +3732,7 @@ void rc_media_playVideo(int loops)
     //initfailed = quit = (initfailed || (SDL_OpenAudio(&spec, NULL) != 0));
     //cout << "quit = " << quit << endl;
     //cout<< "debug 3" << endl;
-    __android_log_print(ANDROID_LOG_ERROR, "RC_DEBUG","PLAYVIDEO_TST1");
+    //__android_log_print(ANDROID_LOG_ERROR, "RC_DEBUG","PLAYVIDEO_TST1");
     if(SDL_OpenAudio(&spec, NULL) < 0)
     {
         rc_audio_isOpen = false;
@@ -3844,26 +3745,26 @@ void rc_media_playVideo(int loops)
         return;
     }
     rc_audio_isOpen = true;
-    __android_log_print(ANDROID_LOG_ERROR, "RC_DEBUG","PLAYVIDEO_TST2");
+    //__android_log_print(ANDROID_LOG_ERROR, "RC_DEBUG","PLAYVIDEO_TST2");
     //cout << "debug 4" << endl;
 
     if(!rc_video_isLoaded)
     {
         //cout << "GILLITEEN" <<endl;
-    	__android_log_print(ANDROID_LOG_ERROR, "RC_DEBUG","PLAYVIDEO_TST3");
+    	//__android_log_print(ANDROID_LOG_ERROR, "RC_DEBUG","PLAYVIDEO_TST3");
         while (audio)
         {
             queue_audio(audio);
             audio = THEORAPLAY_getAudio(decoder);
         } // while
-        __android_log_print(ANDROID_LOG_ERROR, "RC_DEBUG","PLAYVIDEO_TST4");
+        //__android_log_print(ANDROID_LOG_ERROR, "RC_DEBUG","PLAYVIDEO_TST4");
     }
 
     baseticks = SDL_GetTicks();
     rc_video_isLoaded = true;
 
     //fprintf(stderr, "b_debug 3\n");
-    __android_log_print(ANDROID_LOG_ERROR, "RC_DEBUG","PLAYVIDEO_TST5");
+    //__android_log_print(ANDROID_LOG_ERROR, "RC_DEBUG","PLAYVIDEO_TST5");
 
     if (!quit)
         SDL_PauseAudio(0);

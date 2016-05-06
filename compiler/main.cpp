@@ -9,6 +9,8 @@
 
 using namespace std;
 
+#define RC_WINDOWS 1
+
 const int RC_DATA_SEGMENT_SWITCH = 0;
 const int RC_CODE_SEGMENT_SWITCH = 1;
 
@@ -374,10 +376,21 @@ string rc_keyword [] = {
     "K_X", //261
     "K_Y", //262
     "K_Z", //263
-    "WINDOWPOS_CENTERED" //264
+    "WINDOWPOS_CENTERED", //264
+    "HAT_UP", //265
+    "HAT_DOWN", //266
+    "HAT_LEFT", //267
+    "HAT_RIGHT", //268
+    "HAT_RIGHTUP", //269
+    "HAT_RIGHTDOWN", //270
+    "HAT_LEFTUP", //271
+    "HAT_LEFTDOWN", //272
+    "HAT_CENTERED" //273
 };
 
-int rc_keywords_count = 264;
+//int rc_keywords_count = 273;
+
+int rc_keywords_count = sizeof(rc_keyword)/sizeof(rc_keyword[0]);
 
 string vm_str_args[16];
 
@@ -2030,6 +2043,30 @@ int rc_isBuiltIn_ID(string s_id, int arg_count, int tmp_index)
         tmp[tmp_index] = "intern 293";
         return 1;
     }
+    else if(s_id.compare("PROGRAM.NUMJOYHATS")==0)
+    {
+        intern_type = "#";
+        tmp[tmp_index] = "intern 294";
+        return 1;
+    }
+    else if(s_id.compare("PROGRAM.JOYHAT")==0)
+    {
+        intern_type = "#";
+        tmp[tmp_index] = "intern 295";
+        return 1;
+    }
+    else if(s_id.compare("PROGRAM.NUMJOYTRACKBALLS")==0)
+    {
+        intern_type = "#";
+        tmp[tmp_index] = "intern 296";
+        return 1;
+    }
+    else if(s_id.compare("PROGRAM.GETJOYTRACKBALL")==0)
+    {
+        intern_type = "#";
+        tmp[tmp_index] = "intern 297";
+        return 1;
+    }
 
     return 0;
 }
@@ -2582,6 +2619,24 @@ string rc_keywordToken(string sline)
         return "<num>" + rc_intToString(SDLK_z);
     else if(sline.compare("WINDOWPOS_CENTERED")==0)
         return "<num>" + rc_intToString(SDL_WINDOWPOS_CENTERED);
+    else if(sline.compare("HAT_RIGHT")==0)
+        return "<num>" + rc_intToString(SDL_HAT_RIGHT);
+    else if(sline.compare("HAT_LEFT")==0)
+        return "<num>" + rc_intToString(SDL_HAT_LEFT);
+    else if(sline.compare("HAT_UP")==0)
+        return "<num>" + rc_intToString(SDL_HAT_UP);
+    else if(sline.compare("HAT_DOWN")==0)
+        return "<num>" + rc_intToString(SDL_HAT_DOWN);
+    else if(sline.compare("HAT_LEFTUP")==0)
+        return "<num>" + rc_intToString(SDL_HAT_LEFTUP);
+    else if(sline.compare("HAT_LEFTDOWN")==0)
+        return "<num>" + rc_intToString(SDL_HAT_LEFTDOWN);
+    else if(sline.compare("HAT_RIGHTUP")==0)
+        return "<num>" + rc_intToString(SDL_HAT_RIGHTUP);
+    else if(sline.compare("HAT_RIGHTDOWN")==0)
+        return "<num>" + rc_intToString(SDL_HAT_RIGHTDOWN);
+    else if(sline.compare("HAT_CENTERED")==0)
+        return "<num>" + rc_intToString(SDL_HAT_CENTERED);
 }
 
 int rc_isSpecialCharacter(std::string sline)
@@ -8134,7 +8189,9 @@ int rc_evalBlock(int eb_flag = 0)
     }
     else if(rc_tokens[0].compare("<print>")==0)
     {
-        rc_tokens[0] = "";//cout << "check1\n";
+        rc_tokens[0] = "<par>";//cout << "check1\n";
+        rc_tokens[rc_tokens_count] = "</par>";
+        rc_tokens_count++;
         if(rc_preParse(1)!=0)
             return 2;//cout << "check2\n";
         if(rc_mathParser(m_index, s_index)!=0)
@@ -13279,12 +13336,41 @@ int rc_preprocessor(string src_path)
     string inc_file = "";
     int line_num = 1;
     int inc_line = 1;
+    end_of_line_count = 0;
+    bool inc_flag = false;
+    bool inc_p = false;
 
     pp_file.open(pp_str.c_str(), ios::in);
 
     while(!pp_file.eof())
     {
         getline(pp_file, s_line);
+        if(s_line.compare("#INC_START")==0)
+        {
+            //cout << line_num << " START @ " << inc_line << endl;
+            inc_flag = true;
+            pp_tmp << s_line << endl;
+            //inc_line++;
+            continue;
+        }
+        else if(s_line.compare("#INC_END")==0)
+        {
+            //cout << line_num << " END @ " << inc_line << endl;
+            inc_flag = false;
+            line_num++;
+            end_of_line[end_of_line_count] = inc_line;
+            end_of_line_count++;
+            inc_line++;
+            pp_tmp << s_line << endl;
+            continue;
+        }
+        else if(s_line.compare("#SKIP")==0)
+        {
+            //cout << line_num << " END @ " << inc_line << endl;
+            //inc_line++;
+            pp_tmp << s_line << endl;
+            continue;
+        }
         a_status = rc_tokenizer(s_line);
         if(a_status == 0)
         {
@@ -13293,6 +13379,8 @@ int rc_preprocessor(string src_path)
                 //for(int i = 0; i < rc_tokens_count; i++)
                 //    cout << rc_tokens[i] << endl;
                 //cout << endl;
+
+
                 resolved = 1;
                 if(rc_tokens_count != 2)
                 {
@@ -13312,7 +13400,11 @@ int rc_preprocessor(string src_path)
                 pp_tmp2.open(inc_file.c_str(), fstream::in);
                 if(!pp_tmp2.is_open())
                 {
-                    inc_file = src_path + "\\" + inc_file;
+                    #ifdef RC_WINDOWS
+                        inc_file = src_path + "\\" + inc_file;
+                    #else
+                        inc_file = src_path + "/" + inc_file;
+                    #endif // RC_WINDOWS
                     pp_tmp2.open(inc_file.c_str(), fstream::in);
                 }
                 if(!pp_tmp2.is_open())
@@ -13320,6 +13412,11 @@ int rc_preprocessor(string src_path)
                     cout << "Could not open FILE: " << inc_file << endl;
                     return 2;
                 }
+
+                //Note to Me: some bullshit to make include keep line numbers, old method doesn't work
+                if(!inc_flag)
+                    pp_tmp << "#INC_START" << endl;
+
                 while(!pp_tmp2.eof())
                 {
                     getline(pp_tmp2,s_line);
@@ -13328,22 +13425,47 @@ int rc_preprocessor(string src_path)
                 }
                 s_line = "";
                 pp_tmp2.close();
+
+                if(!inc_flag)
+                    pp_tmp << "#INC_END" << endl;
+                else
+                    pp_tmp << "#SKIP" << endl;
+
+                inc_p = true;
+                rc_clearTokens();
+                rc_tokens_count = 0;
             }
+            if(!inc_flag)
+                line_num++;
         }
         else
         {
             cout << "Syntax Error at line " << line_num << endl;
             return 2;
         }
+
+        if(!inc_flag)
+        {
+            end_of_line[end_of_line_count] = inc_line;
+            end_of_line_count++;
+        }
+
         if(rc_tokens_count > 0)
+        {
             pp_tmp << s_line << endl;
+            inc_line++;
+        }
+        else if(inc_p)
+        {
+            inc_p = false;
+        }
         else
+        {
             pp_tmp << endl;
+            inc_line++;
+        }
+
         rc_clearTokens();
-        end_of_line[end_of_line_count] = inc_line;
-        end_of_line_count++;
-        inc_line++;
-        line_num++;
     }
     pp_file.close();
     pp_tmp.seekg(0);
@@ -14216,10 +14338,22 @@ int rc_initFunctions()
     rc_id[737] = "PROGRAM.PREFPATH$ $F 0 1 2 0 0 ";
     rc_id[738] = "PROGRAM.PREFPATH$.ORG_NAME$ $ 0 1 0 70 ";
     rc_id[739] = "PROGRAM.PREFPATH$.APP_NAME$ $ 0 1 0 71 ";
+    rc_id[740] = "PROGRAM.NUMJOYHATS #F 0 1 1 0 0 ";
+    rc_id[741] = "PROGRAM.NUMJOYHATS.JOY_NUM # 0 1 0 401 ";
+    rc_id[742] = "PROGRAM.JOYHAT #F 0 1 2 0 0 ";
+    rc_id[743] = "PROGRAM.JOYHAT.JOY_NUM # 0 1 0 402 ";
+    rc_id[744] = "PROGRAM.JOYHAT.HAT # 0 1 0 403 ";
+    rc_id[745] = "PROGRAM.NUMJOYTRACKBALLS #F 0 1 1 0 0 ";
+    rc_id[746] = "PROGRAM.NUMJOYTRACKBALLS.JOY_NUM # 0 1 0 404 ";
+    rc_id[747] = "PROGRAM.GETJOYTRACKBALL #P 0 1 4 0 0 ";
+    rc_id[748] = "PROGRAM.GETJOYTRACKBALL.JOY_NUM # 0 1 0 405 ";
+    rc_id[749] = "PROGRAM.GETJOYTRACKBALL.BALL # 0 1 0 406 ";
+    rc_id[750] = "PROGRAM.GETJOYTRACKBALL.DX #& 0 1 0 407 ";
+    rc_id[751] = "PROGRAM.GETJOYTRACKBALL.DY #& 0 1 0 408 ";
 
-    nid_count = 401;
+    nid_count = 409;
     sid_count = 72;
-    rc_id_count = 740;
+    rc_id_count = 752;
 
     //nid_count = 53;
     //sid_count = 43;
@@ -14250,14 +14384,19 @@ int rc_getMainSourceLine(int line_num)
 {
     for(int i = 0; i < end_of_line_count; i++)
     {
-        if(line_num < end_of_line[i])
-            return i;
+        if(line_num <= end_of_line[i])
+            return i+1;
     }
     return line_num;
 }
 
 int main(int argc, char * argv[])
 {
+//    rc_file.open("/home/n00b/Desktop/rc_lib.bas", fstream::out);
+//    for(int i = 0; i < rc_keywords_count; i++)
+//        rc_file << StringToLower(rc_keyword[i]) << " ";
+//    rc_file.close();
+//    return 0;
     //cout << "START\n";
     rc_initFunctions();
 
@@ -14277,13 +14416,17 @@ int main(int argc, char * argv[])
      //   in_file = "test.bas";
 
     //cout << "CP2\n";
+
     rc_file.open(in_file.c_str(), fstream::in);
     //rc_file.open("C:\\Users\\Recademics\\Desktop\\New Folder\\demo\\rc_test.bas", fstream::in);
+    //rc_file.open("/home/n00b/Desktop/rc_lib.bas", fstream::in);
 
     if(!rc_file.is_open())
     {
         cout << "file not found\n";
-        system("PAUSE");
+        #ifdef RC_WINDOWS
+            system("PAUSE");
+        #endif // RC_WINDOWS
         exit(EXIT_FAILURE);
         return 0;
     }
@@ -14295,7 +14438,14 @@ int main(int argc, char * argv[])
     current_scope = 0;
     int pre_process_status = 0;
 
-    string rc_src_path = in_file.substr(0, in_file.find_last_of("\\"));
+    #ifdef RC_WINDOWS
+        string rc_src_path = in_file.substr(0, in_file.find_last_of("\\"));
+    #else
+        char * p = realpath(in_file.c_str(), NULL);
+        string rc_src_path = (string)p;
+        rc_src_path = rc_src_path.substr(0, rc_src_path.find_last_of("/"));
+        free(p);
+    #endif
 
     rc_init();
     //cout << "CP4\n";
@@ -14308,7 +14458,9 @@ int main(int argc, char * argv[])
         if(pp_status==2)
         {
             //cout << "Preproccessor failed to compile at line " << src_line_num << "\n";
-            system("PAUSE");
+            #ifdef RC_WINDOWS
+                system("PAUSE");
+            #endif // RC_WINDOWS
             exit(EXIT_FAILURE);
             return 2;
         }
@@ -14321,13 +14473,18 @@ int main(int argc, char * argv[])
 
     rc_file.close();
 
+//    for(int i = 0; i < end_of_line_count; i++)
+//        cout << i << " -> " << end_of_line[i] << endl;
+
     //cout << "RC Basic file close\n";
 
     rc_file.open(pp_str.c_str(), fstream::in);
 
-    line_number = src_line_num;
+    line_number = 1;//src_line_num;
 
     int tmp_size = 10000;
+
+    int inc_i = 0;
 
 
     while(true)
@@ -14343,6 +14500,14 @@ int main(int argc, char * argv[])
         //getline(cin, s_line);
         s_line = "";
         getline(rc_file, s_line);
+        if(s_line.compare("#INC_START")==0 || s_line.compare("#INC_END")==0 || s_line.compare("#SKIP")==0)
+        {
+            if(s_line.compare("#INC_END")==0)
+            {
+                line_number++;
+            }
+            continue;
+        }
         //s_line = " " + s_line;
         //cout << endl << line_number << " code_line = " << s_line << " ->                    " << s_line.length() << endl;
         //s_line = s_line.substr(s_line.find_first_not_of(" ")-1);
@@ -14352,7 +14517,10 @@ int main(int argc, char * argv[])
             cout << "Error on line: " << s_line << endl;
             //cout << "Compiler Stopped with status " << analyze_status << " at line " << line_number << "\n";
             cout << "Compiler stopped at line " << rc_getMainSourceLine(line_number) << endl;
-            system("PAUSE");
+            cout << line_number << endl;
+            #ifdef RC_WINDOWS
+                system("PAUSE");
+            #endif
             exit(EXIT_FAILURE);
             return 2;
         }
@@ -14362,7 +14530,9 @@ int main(int argc, char * argv[])
             if(current_scope!=0)
             {
                 cout << "Compiler Error: Cannot end program in current scope" << endl;
-                system("PAUSE");
+                #ifdef RC_WINDOWS
+                    system("PAUSE");
+                #endif // RC_WINDOWS
                 exit(EXIT_FAILURE);
                 return 2;
             }
@@ -14398,7 +14568,8 @@ int main(int argc, char * argv[])
     string def_id = "";
 
 //    fstream def_file;
-//    def_file.open("C:\\Users\\Recademics\\Desktop\\New folder\\demo\\def_file.txt", ios::out);
+//    //def_file.open("C:\\Users\\Recademics\\Desktop\\New folder\\demo\\def_file.txt", ios::out);
+//    def_file.open("/home/n00b/Desktop/def_file.txt", ios::out);
 //
 //    for(int i = 0; i < rc_id_count; i++)
 //    {

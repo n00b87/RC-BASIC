@@ -515,6 +515,14 @@
 #define SETENV_V_STR 69
 #define PREFPATH_STR_ORG_NAME_STR 70
 #define PREFPATH_STR_APP_NAME_STR 71
+#define NUMJOYHATS_JOY_NUM 401
+#define JOYHAT_JOY_NUM 402
+#define JOYHAT_HAT 403
+#define NUMJOYTRACKBALLS_JOY_NUM 404
+#define GETJOYTRACKBALL_JOY_NUM 405
+#define GETJOYTRACKBALL_BALL 406
+#define GETJOYTRACKBALL_DX 407
+#define GETJOYTRACKBALL_DY 408
 
 #define RC_LOOP_BREAK 50
 
@@ -6525,6 +6533,21 @@ inline void rc_vm_intern()
             rc_str_stack[rc_str_stack_index] = rc_intern_prefPath();
             rc_str_stack_index++;
             break;
+        case 294:
+            rc_num_stack[rc_num_stack_index] = rc_media_numJoyHats((int)rc_nid[NUMJOYHATS_JOY_NUM][0]);
+            rc_num_stack_index++;
+            break;
+        case 295:
+        	rc_num_stack[rc_num_stack_index] = rc_media_joyHat((int)rc_nid[JOYHAT_JOY_NUM][0], (int)rc_nid[JOYHAT_HAT][0]);
+            rc_num_stack_index++;
+            break;
+        case 296:
+        	rc_num_stack[rc_num_stack_index] = rc_media_numJoyTrackBalls((int)rc_nid[NUMJOYTRACKBALLS_JOY_NUM][0]);
+            rc_num_stack_index++;
+            break;
+        case 297:
+            rc_media_getJoyTrackBall((int)rc_nid[GETJOYTRACKBALL_JOY_NUM][0], (int)rc_nid[GETJOYTRACKBALL_BALL][0], &rc_nid[GETJOYTRACKBALL_DX][0], &rc_nid[GETJOYTRACKBALL_DY][0]);
+            break;
 
         default:
             RC_VM_ACTIVE = 0;
@@ -6941,7 +6964,9 @@ inline int rc_vm_run()
                 if(rc_checkEvent())
                 {
                     while(rc_getEvents()){}
-                    //SDL_PumpEvents();
+                    #ifndef RC_WINDOWS
+                        SDL_PumpEvents();
+                    #endif // RC_WINDOWS
                     SDL_FlushEvents(SDL_FIRSTEVENT, SDL_LASTEVENT);
                 }
                 rc_vm_f[i_val3] = rc_vm_stack.top();
@@ -7034,7 +7059,9 @@ inline int rc_vm_run()
                 if(rc_checkEvent())
                 {
                     while(rc_getEvents()){}
-                    //SDL_PumpEvents();
+                    #ifndef RC_WINDOWS
+                        SDL_PumpEvents();
+                    #endif // RC_WINDOWS
                     SDL_FlushEvents(SDL_FIRSTEVENT, SDL_LASTEVENT);
                 }
                 rc_vm_f[i_val3] = rc_vm_stack.top();
@@ -7564,15 +7591,15 @@ int main(int argc, char * argv[])
 
     //char * buf = "";
     //int n = sprintf(buf, "Code Segment Size = %d", rc_code_segment_size);
-    __android_log_print(ANDROID_LOG_ERROR, "RC_DEBUG", "TELL %lld", SDL_RWtell(rc_file));
+    //__android_log_print(ANDROID_LOG_ERROR, "RC_DEBUG", "TELL %lld", SDL_RWtell(rc_file));
     //cout << "Code Segment Size = " << rc_code_segment_size << endl;
-    __android_log_print(ANDROID_LOG_ERROR, "RC_CODE_SEG_SIZE","%lld",rc_code_segment_size);
+    //__android_log_print(ANDROID_LOG_ERROR, "RC_CODE_SEG_SIZE","%lld",rc_code_segment_size);
     //cout << "Data Segment Size = " << rc_data_segment_size << endl;
-    __android_log_print(ANDROID_LOG_ERROR, "RC_DATA_SEG_SIZE", "%lld", rc_data_segment_size);
+    //__android_log_print(ANDROID_LOG_ERROR, "RC_DATA_SEG_SIZE", "%lld", rc_data_segment_size);
     //cout << "RC_VM_M Size = " << rc_max_m << endl;
-    __android_log_print(ANDROID_LOG_ERROR, "RC_MAX_M", "%lld", rc_max_m);
+    //__android_log_print(ANDROID_LOG_ERROR, "RC_MAX_M", "%lld", rc_max_m);
     //cout << "RC_VM_S Size = " << rc_max_s << endl;
-    __android_log_print(ANDROID_LOG_ERROR, "RC_MAX_S", "%lld", rc_max_s);
+    //__android_log_print(ANDROID_LOG_ERROR, "RC_MAX_S", "%lld", rc_max_s);
     //cout << "RC_VM_F Size = " << rc_max_f << endl;
     //cout << "RC_NUM_ID Size = " << rc_nid_size << endl;
     //cout << "RC_STR_ID Size = " << rc_sid_size << endl;
