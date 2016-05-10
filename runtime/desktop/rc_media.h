@@ -506,14 +506,21 @@ inline bool rc_media_openWindow_hw(int win_num, string caption, int x, int y, in
 
     rc_hconsole[win_num] = SDL_CreateTexture(rc_win_renderer[win_num],rc_pformat->format,SDL_TEXTUREACCESS_TARGET,w,h);
 
+    //cout << "wtf" << endl;
+
     rc_console_width[win_num] = w/8;
     rc_console_height[win_num] = h/8;
     rc_sConsole_x[win_num] = 0;
     rc_sConsole_y[win_num] = 0;
 
+    //cout << "cdi" << endl;
+
     SDL_SetRenderDrawColor(rc_win_renderer[win_num], 0, 0, 0, 0);
     SDL_RenderClear(rc_win_renderer[win_num]);
     SDL_RenderPresent(rc_win_renderer[win_num]);
+
+    //cout << "open complete" << endl;
+
     return true;
 }
 
@@ -747,6 +754,40 @@ bool rc_media_windowIsVisible(int win_num)
     {
         Uint32 wflags = SDL_GetWindowFlags(rc_win[win_num]);
         if(wflags & SDL_WINDOW_SHOWN)
+            return true;
+        else
+            return false;
+    }
+    else
+    {
+        cout << "WindowIsVisible Error: Window #" << win_num << " is not an active window" << endl;
+        return false;
+    }
+}
+
+bool rc_media_windowHasMouseFocus(int win_num)
+{
+    if(rc_winCheck(win_num))
+    {
+        Uint32 wflags = SDL_GetWindowFlags(rc_win[win_num]);
+        if(wflags & SDL_WINDOW_MOUSE_FOCUS)
+            return true;
+        else
+            return false;
+    }
+    else
+    {
+        cout << "WindowIsVisible Error: Window #" << win_num << " is not an active window" << endl;
+        return false;
+    }
+}
+
+bool rc_media_windowHasInputFocus(int win_num)
+{
+    if(rc_winCheck(win_num))
+    {
+        Uint32 wflags = SDL_GetWindowFlags(rc_win[win_num]);
+        if(wflags & SDL_WINDOW_INPUT_FOCUS)
             return true;
         else
             return false;
@@ -2539,15 +2580,6 @@ void rc_media_GetRenderedText_hw(int slot, string text)
 
 int rc_getEvents()
 {
-    int njoy = SDL_NumJoysticks();
-    if(rc_numJoysticks < njoy)
-    {
-        for(int i = 0; i < njoy; i++)
-        {
-            if(rc_joystick[i] == NULL)
-                SDL_JoystickOpen(i);
-        }
-    }
     SDL_Event event;
     int g_events = SDL_PollEvent(&event);
     //int g_events = SDL_WaitEvent(&event);
@@ -2648,15 +2680,15 @@ int rc_getEvents()
             rc_mwheelx = event.wheel.x;
             rc_mwheely = event.wheel.y;
             break;
-        case SDL_JOYBUTTONDOWN:
-            rc_joybutton[event.jbutton.which][event.jbutton.button] = 1;
-            break;
-        case SDL_JOYBUTTONUP:
-            rc_joybutton[event.jbutton.which][event.jbutton.button] = 0;
-            break;
-        case SDL_JOYAXISMOTION:
-            rc_joy_axis[event.jaxis.which][event.jaxis.axis] = event.jaxis.value;
-            break;
+//        case SDL_JOYBUTTONDOWN:
+//            rc_joybutton[event.jbutton.which][event.jbutton.button] = 1;
+//            break;
+//        case SDL_JOYBUTTONUP:
+//            rc_joybutton[event.jbutton.which][event.jbutton.button] = 0;
+//            break;
+//        case SDL_JOYAXISMOTION:
+//            rc_joy_axis[event.jaxis.which][event.jaxis.axis] = event.jaxis.value;
+//            break;
         case SDL_FINGERDOWN:
             rc_touch = 1;
             rc_touchX = event.tfinger.x * rc_win_width;
@@ -2689,6 +2721,7 @@ int rc_getEvents()
             rc_pressure = event.tfinger.pressure;
             break;
     }
+    //cout << "end_event" << endl;
     return g_events;
 }
 
@@ -2958,7 +2991,8 @@ int rc_media_numJoysticks()
 
 int rc_media_joyAxis(int joy_num, int axis)
 {
-    return rc_joy_axis[joy_num][axis];
+    return SDL_JoystickGetAxis(rc_joystick[joy_num], axis);
+    //return rc_joy_axis[joy_num][axis];
 //    int jaxis_status = rc_joy_axis[joy_num][axis];
 //    while(rc_getEvents())
 //    {
@@ -2979,7 +3013,8 @@ int rc_media_joyAxis(int joy_num, int axis)
 
 int rc_media_joyButton(int joy_num, int jbutton)
 {
-    return rc_joybutton[joy_num][jbutton];
+    return SDL_JoystickGetButton(rc_joystick[joy_num], jbutton);
+    //return rc_joybutton[joy_num][jbutton];
 //    int jbutton_status = rc_joybutton[joy_num][jbutton];
 //    while(rc_getEvents())
 //    {
@@ -3033,6 +3068,7 @@ int rc_media_numJoyHats(int joy_num)
 int rc_media_joyHat(int joy_num, int hat)
 {
     return SDL_JoystickGetHat(rc_joystick[joy_num], hat);
+    //return SDL_JoystickGetHat(rc_joystick[joy_num], hat);
 }
 
 int rc_media_numJoyTrackBalls(int joy_num)
@@ -3852,8 +3888,10 @@ void rc_media_stopVideo()
 
 static bool cycleVideo()
 {
+    //cout << "video_start" << endl;
     if(!rc_video_isPlaying)
         return false;
+    //cout << "never print this" << endl;
     //int q = !quit;
     //int tp = THEORAPLAY_isDecoding(decoder);
     //cout << "VARS = " << q << " & " << tp << endl;

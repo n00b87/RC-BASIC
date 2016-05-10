@@ -731,6 +731,40 @@ bool rc_media_windowIsVisible(int win_num)
     }
 }
 
+bool rc_media_windowHasMouseFocus(int win_num)
+{
+    if(rc_winCheck(win_num))
+    {
+        Uint32 wflags = SDL_GetWindowFlags(rc_win[win_num]);
+        if(wflags & SDL_WINDOW_MOUSE_FOCUS)
+            return true;
+        else
+            return false;
+    }
+    else
+    {
+        cout << "WindowIsVisible Error: Window #" << win_num << " is not an active window" << endl;
+        return false;
+    }
+}
+
+bool rc_media_windowHasInputFocus(int win_num)
+{
+    if(rc_winCheck(win_num))
+    {
+        Uint32 wflags = SDL_GetWindowFlags(rc_win[win_num]);
+        if(wflags & SDL_WINDOW_INPUT_FOCUS)
+            return true;
+        else
+            return false;
+    }
+    else
+    {
+        cout << "WindowIsVisible Error: Window #" << win_num << " is not an active window" << endl;
+        return false;
+    }
+}
+
 bool rc_media_windowIsBordered(int win_num)
 {
     if(rc_winCheck(win_num))
@@ -2475,15 +2509,6 @@ void rc_media_GetRenderedText_hw(int slot, string text)
 
 int rc_getEvents()
 {
-    int njoy = SDL_NumJoysticks();
-    if(rc_numJoysticks < njoy)
-    {
-        for(int i = 0; i < njoy; i++)
-        {
-            if(rc_joystick[i] == NULL)
-                SDL_JoystickOpen(i);
-        }
-    }
     SDL_Event event;
     int g_events = SDL_PollEvent(&event);
     switch(event.type)
@@ -2899,7 +2924,8 @@ int rc_media_numJoysticks()
 
 int rc_media_joyAxis(int joy_num, int axis)
 {
-    return rc_joy_axis[joy_num][axis];
+    return SDL_JoystickGetAxis(rc_joystick[joy_num], axis);
+    //return rc_joy_axis[joy_num][axis];
 //    int jaxis_status = rc_joy_axis[joy_num][axis];
 //    while(rc_getEvents())
 //    {
@@ -2920,7 +2946,8 @@ int rc_media_joyAxis(int joy_num, int axis)
 
 int rc_media_joyButton(int joy_num, int jbutton)
 {
-    return rc_joybutton[joy_num][jbutton];
+    return SDL_JoystickGetButton(rc_joystick[joy_num], jbutton);
+    //return rc_joybutton[joy_num][jbutton];
 //    int jbutton_status = rc_joybutton[joy_num][jbutton];
 //    while(rc_getEvents())
 //    {
@@ -2974,6 +3001,7 @@ int rc_media_numJoyHats(int joy_num)
 int rc_media_joyHat(int joy_num, int hat)
 {
     return SDL_JoystickGetHat(rc_joystick[joy_num], hat);
+    //return SDL_JoystickGetHat(rc_joystick[joy_num], hat);
 }
 
 int rc_media_numJoyTrackBalls(int joy_num)

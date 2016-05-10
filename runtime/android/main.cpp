@@ -523,6 +523,8 @@
 #define GETJOYTRACKBALL_BALL 406
 #define GETJOYTRACKBALL_DX 407
 #define GETJOYTRACKBALL_DY 408
+#define WINDOWHASINPUTFOCUS_WIN 409
+#define WINDOWHASMOUSEFOCUS_WIN 410
 
 #define RC_LOOP_BREAK 50
 
@@ -6548,6 +6550,14 @@ inline void rc_vm_intern()
         case 297:
             rc_media_getJoyTrackBall((int)rc_nid[GETJOYTRACKBALL_JOY_NUM][0], (int)rc_nid[GETJOYTRACKBALL_BALL][0], &rc_nid[GETJOYTRACKBALL_DX][0], &rc_nid[GETJOYTRACKBALL_DY][0]);
             break;
+        case 298:
+            rc_num_stack[rc_num_stack_index] = rc_media_windowHasInputFocus((int)rc_nid[WINDOWHASINPUTFOCUS_WIN][0]);
+            rc_num_stack_index++;
+            break;
+        case 299:
+            rc_num_stack[rc_num_stack_index] = rc_media_windowHasMouseFocus((int)rc_nid[WINDOWHASMOUSEFOCUS_WIN][0]);
+            rc_num_stack_index++;
+            break;
 
         default:
             RC_VM_ACTIVE = 0;
@@ -7690,11 +7700,11 @@ int main(int argc, char * argv[])
     {
         //cout << "line " << l << endl;
         //cycleVideo();
-        if(rc_checkEvent())
-        {
-            rc_getEvents();
-            //SDL_FlushEvents(SDL_FIRSTEVENT, SDL_LASTEVENT);
-        }
+//        if(rc_checkEvent())
+//        {
+//            rc_getEvents();
+//            //SDL_FlushEvents(SDL_FIRSTEVENT, SDL_LASTEVENT);
+//        }
         if(rc_vm_run() < 0)
         {
             break;

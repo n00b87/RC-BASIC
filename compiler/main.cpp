@@ -1,3 +1,5 @@
+#define RC_WINDOWS
+
 #include <iostream>
 #include <sstream>
 #include <fstream>
@@ -8,8 +10,6 @@
 #include <ctype.h>
 
 using namespace std;
-
-#define RC_WINDOWS 1
 
 const int RC_DATA_SEGMENT_SWITCH = 0;
 const int RC_CODE_SEGMENT_SWITCH = 1;
@@ -2065,6 +2065,18 @@ int rc_isBuiltIn_ID(string s_id, int arg_count, int tmp_index)
     {
         intern_type = "#";
         tmp[tmp_index] = "intern 297";
+        return 1;
+    }
+    else if(s_id.compare("PROGRAM.WINDOWHASINPUTFOCUS")==0)
+    {
+        intern_type = "#";
+        tmp[tmp_index] = "intern 298";
+        return 1;
+    }
+    else if(s_id.compare("PROGRAM.WINDOWHASMOUSEFOCUS")==0)
+    {
+        intern_type = "#";
+        tmp[tmp_index] = "intern 299";
         return 1;
     }
 
@@ -14350,10 +14362,14 @@ int rc_initFunctions()
     rc_id[749] = "PROGRAM.GETJOYTRACKBALL.BALL # 0 1 0 406 ";
     rc_id[750] = "PROGRAM.GETJOYTRACKBALL.DX #& 0 1 0 407 ";
     rc_id[751] = "PROGRAM.GETJOYTRACKBALL.DY #& 0 1 0 408 ";
+    rc_id[752] = "PROGRAM.WINDOWHASINPUTFOCUS #F 0 1 1 0 0 ";
+    rc_id[753] = "PROGRAM.WINDOWHASINPUTFOCUS.WIN # 0 1 0 409 ";
+    rc_id[754] = "PROGRAM.WINDOWHASMOUSEFOCUS #F 0 1 1 0 0 ";
+    rc_id[755] = "PROGRAM.WINDOWHASMOUSEFOCUS.WIN # 0 1 0 410 ";
 
-    nid_count = 409;
+    nid_count = 411;
     sid_count = 72;
-    rc_id_count = 752;
+    rc_id_count = 756;
 
     //nid_count = 53;
     //sid_count = 43;

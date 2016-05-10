@@ -529,6 +529,8 @@
 #define GETJOYTRACKBALL_BALL 406
 #define GETJOYTRACKBALL_DX 407
 #define GETJOYTRACKBALL_DY 408
+#define WINDOWHASINPUTFOCUS_WIN 409
+#define WINDOWHASMOUSEFOCUS_WIN 410
 
 #define RC_LOOP_BREAK 50
 
@@ -2931,6 +2933,7 @@ inline void rc_vm_pop()
     switch(arg_type1)
     {
         case 1:
+            //cout << "get m" << endl;
             i_val1 = rc_segment_getUInt(RC_CURRENT_SEGMENT, RC_CURRENT_ADDRESS);
             RC_CURRENT_ADDRESS += vm_data_size;
 
@@ -2938,7 +2941,7 @@ inline void rc_vm_pop()
             rc_num_stack_index--;
 
             rc_vm_m[i_val1] = rc_num_stack[rc_num_stack_index];
-            //cout << "pop m" << i_val1 << endl;
+            //cout << "end_pop m" << i_val1 << endl;
             return;
         case 4:
             i_val1 = rc_segment_getUInt(RC_CURRENT_SEGMENT, RC_CURRENT_ADDRESS);
@@ -5936,6 +5939,7 @@ inline void rc_vm_intern()
         case 76:
             //cout << "open window\n";
             rc_media_openWindow_hw((int)rc_nid[WINDOWOPEN_WIN_NUM][0],rc_sid[WINDOWOPEN_TITLE_STR][0],(int)rc_nid[WINDOWOPEN_X][0],(int)rc_nid[WINDOWOPEN_Y][0],(int)rc_nid[WINDOWOPEN_W][0],(int)rc_nid[WINDOWOPEN_H][0],(int)rc_nid[WINDOWOPEN_MODE][0]);
+            //cout << "break" << endl;
             break;
         case 77:
             //cout << "close window\n";
@@ -6632,6 +6636,14 @@ inline void rc_vm_intern()
         case 297:
             rc_media_getJoyTrackBall((int)rc_nid[GETJOYTRACKBALL_JOY_NUM][0], (int)rc_nid[GETJOYTRACKBALL_BALL][0], &rc_nid[GETJOYTRACKBALL_DX][0], &rc_nid[GETJOYTRACKBALL_DY][0]);
             break;
+        case 298:
+            rc_num_stack[rc_num_stack_index] = rc_media_windowHasInputFocus((int)rc_nid[WINDOWHASINPUTFOCUS_WIN][0]);
+            rc_num_stack_index++;
+            break;
+        case 299:
+            rc_num_stack[rc_num_stack_index] = rc_media_windowHasMouseFocus((int)rc_nid[WINDOWHASMOUSEFOCUS_WIN][0]);
+            rc_num_stack_index++;
+            break;
 
 
         default:
@@ -6799,10 +6811,12 @@ inline int rc_vm_run()
 
     if(vm_cmd.s == 32) //mov
     {
+        //cout << "mov" << endl;
         rc_vm_mov();
     }
     else if(vm_cmd.s == 33) //mov$
     {
+        //cout << "mov$" << endl;
         rc_vm_mov_str();
     }
     else if(vm_cmd.s == 34) //pwr
@@ -6851,6 +6865,7 @@ inline int rc_vm_run()
     }
     else if(vm_cmd.s == 45) //mul
     {
+        //cout << "str$" << endl;
         rc_vm_convertToStr();
     }
     else if(vm_cmd.s == 46) //mul
@@ -6863,18 +6878,22 @@ inline int rc_vm_run()
     }
     else if(vm_cmd.s == 48) //mul
     {
+        //cout << "push" << endl;
         rc_vm_push();
     }
     else if(vm_cmd.s == 49) //mul
     {
+        //cout << "push$" << endl;
         rc_vm_push_str();
     }
     else if(vm_cmd.s == 50) //mul
     {
+        //cout << "pop" << endl;
         rc_vm_pop();
     }
     else if(vm_cmd.s == 51) //mul
     {
+        //cout << "pop$" << endl;
         rc_vm_pop_str();
     }
     else if(vm_cmd.s == 52) //mul
@@ -7048,6 +7067,16 @@ inline int rc_vm_run()
                 cycleVideo();
                 if(rc_checkEvent())
                 {
+                    int njoy = SDL_NumJoysticks();
+                    if(rc_numJoysticks < njoy)
+                    {
+                        for(int i = 0; i < njoy; i++)
+                        {
+                            if(rc_joystick[i] == NULL)
+                                SDL_JoystickOpen(i);
+                        }
+                        rc_numJoysticks = njoy;
+                    }
                     while(rc_getEvents()){}
                     #ifndef RC_WINDOWS
                         SDL_PumpEvents();
@@ -7143,6 +7172,16 @@ inline int rc_vm_run()
                 cycleVideo();
                 if(rc_checkEvent())
                 {
+                    int njoy = SDL_NumJoysticks();
+                    if(rc_numJoysticks < njoy)
+                    {
+                        for(int i = 0; i < njoy; i++)
+                        {
+                            if(rc_joystick[i] == NULL)
+                                SDL_JoystickOpen(i);
+                        }
+                        rc_numJoysticks = njoy;
+                    }
                     while(rc_getEvents()){}
                     #ifndef RC_WINDOWS
                         SDL_PumpEvents();
@@ -7266,6 +7305,16 @@ inline int rc_vm_run()
             cycleVideo();
             if(rc_checkEvent())
             {
+                int njoy = SDL_NumJoysticks();
+                if(rc_numJoysticks < njoy)
+                {
+                    for(int i = 0; i < njoy; i++)
+                    {
+                        if(rc_joystick[i] == NULL)
+                            SDL_JoystickOpen(i);
+                    }
+                    rc_numJoysticks = njoy;
+                }
                 //rc_textinput_flag = false;
                 while(rc_getEvents()){}
 //                if(rc_textinput_string.length()!=rc_text_len)
@@ -7365,6 +7414,16 @@ inline int rc_vm_run()
             cycleVideo();
             if(rc_checkEvent())
             {
+                int njoy = SDL_NumJoysticks();
+                if(rc_numJoysticks < njoy)
+                {
+                    for(int i = 0; i < njoy; i++)
+                    {
+                        if(rc_joystick[i] == NULL)
+                            SDL_JoystickOpen(i);
+                    }
+                    rc_numJoysticks = njoy;
+                }
                 while(rc_getEvents()){}
                 #ifndef RC_WINDOWS
                     SDL_PumpEvents();
@@ -7826,12 +7885,12 @@ int main(int argc, char * argv[])
     while(RC_VM_ACTIVE)
     {
         //cout << "line " << l << endl;
-        cycleVideo();
-        if(rc_checkEvent())
-        {
-            rc_getEvents();
-            //SDL_FlushEvents(SDL_FIRSTEVENT, SDL_LASTEVENT);
-        }
+//        cycleVideo();
+//        if(rc_checkEvent())
+//        {
+//            rc_getEvents();
+//            //SDL_FlushEvents(SDL_FIRSTEVENT, SDL_LASTEVENT);
+//        }
         if(rc_vm_run() < 0)
         {
             break;
