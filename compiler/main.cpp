@@ -1,4 +1,5 @@
 #define RC_WINDOWS
+//#define RC_LINUX
 
 #include <iostream>
 #include <sstream>
@@ -2077,6 +2078,48 @@ int rc_isBuiltIn_ID(string s_id, int arg_count, int tmp_index)
     {
         intern_type = "#";
         tmp[tmp_index] = "intern 299";
+        return 1;
+    }
+    else if(s_id.compare("PROGRAM.PUSH_N")==0)
+    {
+        intern_type = "#";
+        tmp[tmp_index] = "intern 300";
+        return 1;
+    }
+    else if(s_id.compare("PROGRAM.PUSH_S")==0)
+    {
+        intern_type = "#";
+        tmp[tmp_index] = "intern 301";
+        return 1;
+    }
+    else if(s_id.compare("PROGRAM.POP_N")==0)
+    {
+        intern_type = "#";
+        tmp[tmp_index] = "intern 302";
+        return 1;
+    }
+    else if(s_id.compare("PROGRAM.POP_S$")==0)
+    {
+        intern_type = "$";
+        tmp[tmp_index] = "intern 303";
+        return 1;
+    }
+    else if(s_id.compare("PROGRAM.N_STACK_SIZE")==0)
+    {
+        intern_type = "#";
+        tmp[tmp_index] = "intern 304";
+        return 1;
+    }
+    else if(s_id.compare("PROGRAM.S_STACK_SIZE")==0)
+    {
+        intern_type = "#";
+        tmp[tmp_index] = "intern 305";
+        return 1;
+    }
+    else if(s_id.compare("PROGRAM.JOYSTICKISCONNECTED")==0)
+    {
+        intern_type = "#";
+        tmp[tmp_index] = "intern 306";
         return 1;
     }
 
@@ -5499,6 +5542,9 @@ int rc_mathParser(int m_init = 0, int s_init = 0)
 
 
             //<fcn_id> evaluate
+            //int fn_n_count = 0;
+            //string fn_n_id[99];
+            //int fn_s_id = 0;
             if(rc_tokens[currentBlock_start-1].substr(0,8).compare("<fcn_id>")==0 ||
                rc_tokens[currentBlock_start-1].substr(0,8).compare("<prc_id>")==0)
             {
@@ -5513,8 +5559,10 @@ int rc_mathParser(int m_init = 0, int s_init = 0)
                     }
                     else if(rc_getID_data(arg_id[i], "id_type").compare("#")==0)
                     {
+                        //the solution to recursion is to push all variables within the
+                        //function up to where the recursive call is made
                         tmp[currentIndex] = "mov " + arg_id[i] + " " + arg_value[i];//v1 is id
-                        //cout << tmp[currentIndex] << endl;
+                        //cout << "RBC_DEBUG_1: " << tmp[currentIndex] << endl;
                         currentIndex++;
                     }
                     else if(rc_getID_data(arg_id[i], "id_type").substr(1,1).compare("&")==0)
@@ -8201,9 +8249,7 @@ int rc_evalBlock(int eb_flag = 0)
     }
     else if(rc_tokens[0].compare("<print>")==0)
     {
-        rc_tokens[0] = "<par>";//cout << "check1\n";
-        rc_tokens[rc_tokens_count] = "</par>";
-        rc_tokens_count++;
+        rc_tokens[0] = "";//cout << "check1\n";
         if(rc_preParse(1)!=0)
             return 2;//cout << "check2\n";
         if(rc_mathParser(m_index, s_index)!=0)
@@ -14366,10 +14412,20 @@ int rc_initFunctions()
     rc_id[753] = "PROGRAM.WINDOWHASINPUTFOCUS.WIN # 0 1 0 409 ";
     rc_id[754] = "PROGRAM.WINDOWHASMOUSEFOCUS #F 0 1 1 0 0 ";
     rc_id[755] = "PROGRAM.WINDOWHASMOUSEFOCUS.WIN # 0 1 0 410 ";
+    rc_id[756] = "PROGRAM.PUSH_N #P 0 1 1 0 0 ";
+    rc_id[757] = "PROGRAM.PUSH_N.N # 0 1 0 411 ";
+    rc_id[758] = "PROGRAM.PUSH_S #P 0 1 1 0 0 ";
+    rc_id[759] = "PROGRAM.PUSH_S.S$ $ 0 1 0 72 ";
+    rc_id[760] = "PROGRAM.POP_N #F 0 1 0 0 0 ";
+    rc_id[761] = "PROGRAM.POP_S$ $F 0 1 0 0 0 ";
+    rc_id[762] = "PROGRAM.N_STACK_SIZE #F 0 1 0 0 0 ";
+    rc_id[763] = "PROGRAM.S_STACK_SIZE #F 0 1 0 0 0 ";
+    rc_id[764] = "PROGRAM.JOYSTICKISCONNECTED #F 0 1 1 0 0 ";
+    rc_id[765] = "PROGRAM.JOYSTICKISCONNECTED.JOY_NUM # 0 1 0 412 ";
 
-    nid_count = 411;
-    sid_count = 72;
-    rc_id_count = 756;
+    nid_count = 413;
+    sid_count = 73;
+    rc_id_count = 766;
 
     //nid_count = 53;
     //sid_count = 43;
@@ -14571,7 +14627,7 @@ int main(int argc, char * argv[])
     remove("tmp.bas");
 
     //for(int i = 0; i < tmp_count; i++)
-    //    cout << "TMP[" << rc_intToString(i) <<"] = " << tmp[i] << endl;
+      //  cout << "TMP[" << rc_intToString(i) <<"] = " << tmp[i] << endl;
 
     //system("pause");
 

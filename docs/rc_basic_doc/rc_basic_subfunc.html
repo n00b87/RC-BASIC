@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta  content="text/html; charset=UTF-8"  http-equiv="content-type">
+    <title>RC BASIC Functions and Sub Routines</title>
+  </head>
+  <body>
+    <div  style="text-align: center;"><span  style="text-decoration: underline;">FUNCTIONS
+        AND SUB ROUTINES</span><br>
+      <span  style="text-decoration: underline;"></span></div>
+    <span  style="text-decoration: underline;"> <br>
+    </span>
+    <div  style="text-align: left;">&nbsp;&nbsp;&nbsp; Functions and Sub
+      Routines are blocks of code that can be executed any where in your
+      program.<br>
+      <br>
+      &nbsp;&nbsp;&nbsp; The biggest difference between Functions and Sub
+      Routines is that Functions can return a value.&nbsp; Basically Functions
+      and be used as a string or number value in an expression.&nbsp; RC BASIC
+      has several built-in functions to perform different task such as compute
+      square roots, get the time, etc.&nbsp; Functions are either numbers or
+      strings just like variables and arrays.&nbsp; As such, functions can be
+      used anywhere a variable or array can be used.&nbsp; Look at the
+      following:<br>
+      <br>
+      &nbsp;&nbsp;&nbsp; DIM X[2]<br>
+      &nbsp;&nbsp;&nbsp; X[0] = SQRT(25)<br>
+      &nbsp;&nbsp;&nbsp; X[1] = SQRT(36)<br>
+      &nbsp;&nbsp;&nbsp; PRINT "THE SQUARE ROOT OF 25 IS " + X[0]<br>
+      &nbsp;&nbsp;&nbsp; PRINT "THE SQUARE ROOT OF 36 IS " + X[1]<br>
+      <br>
+      &nbsp;&nbsp;&nbsp; The above code creates a number array called X with 2
+      elements in it.&nbsp; It stores the square root of 25 in the first index
+      and stores the square root of 36 in the second index.&nbsp; It then
+      outputs both values to the console.&nbsp; The output should look like
+      this:<br>
+      <br>
+      &nbsp;&nbsp;&nbsp; THE SQUARE ROOT OF 25 IS 5<br>
+      &nbsp;&nbsp;&nbsp; THE SQUARE ROOT OF 36 IS 6<br>
+      <br>
+      &nbsp;&nbsp;&nbsp; String functions can be used in a string expression
+      just like number functions can be used in a number expression.&nbsp; Look
+      at the following code:<br>
+      <br>
+      &nbsp;&nbsp;&nbsp; B$ = MID$("HELLO WORLD", 0, 2)<br>
+      &nbsp;&nbsp;&nbsp; PRINT "THE FIRST TWO CHARACTERS IN HELLO WORLD ARE "
+      &amp; B$<br>
+      <br>
+      &nbsp;&nbsp;&nbsp; The above code creates a string variable called B and
+      stores 2 characters starting from position 0 in the string HELLO
+      WORLD.&nbsp; It then outputs the value to the console.&nbsp; The output
+      should look like the following:<br>
+      <br>
+      &nbsp;&nbsp;&nbsp; THE FIRST&nbsp; TWO CHARACTERS IN HELLO WORLD ARE HE<br>
+      <br>
+      &nbsp;&nbsp;&nbsp; Sub Routines can execute code in other parts of your
+      program just like a function.&nbsp; However Sub Routines cannot return
+      values and cannot be used in expressions.&nbsp; So why would you want to
+      use a Sub Routine over a function?&nbsp; Well Sub Routines have less over
+      head since it does not have to internally push a value onto the stack like
+      a function does.&nbsp; So in cases where you do not need to return a value
+      you should use a Sub Routine.&nbsp; RC BASIC has several built-in Sub
+      Routines to perform task where a return value is not necessary.&nbsp; Look
+      at the following:<br>
+      <br>
+      &nbsp;&nbsp;&nbsp; SYSTEM("PAUSE")<br>
+      <br>
+      &nbsp;&nbsp;&nbsp; SYSTEM is a Sub Routine that sends a command to the
+      operating system shell.&nbsp; The line above will pause the system shell
+      until a key is pressed.&nbsp; Since SYSTEM doesn't perform calculations of
+      any kind it did not need to be implemented as a Function.<br>
+      <br>
+      &nbsp;&nbsp;&nbsp; In addition to the built-in Functions and Sub Routines
+      RC BASIC also allows programmers to build there own Functions and Sub
+      Routines.&nbsp; You do this using the FUNCTION or SUB keywords.<br>
+      <br>
+      &nbsp;&nbsp;&nbsp; FUNCTION&nbsp; MYFUNC(A, B)<br>
+      &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; C = A + B<br>
+      &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; RETURN C<br>
+      &nbsp;&nbsp;&nbsp; END FUNCTION<br>
+      <br>
+      &nbsp;&nbsp;&nbsp; The above code creates a function called MYFUNC which
+      takes in two arguments: A and B.&nbsp; To use this function you would call
+      it like this:<br>
+      <br>
+      &nbsp;&nbsp;&nbsp; MYFUNC(3, 4)<br>
+      <br>
+      &nbsp;&nbsp;&nbsp; The code above will pass 3 and 4 to the variables A and
+      B in MYFUNC respectively.&nbsp; The function creates a variable called C
+      and sets it equal to the sum of 3 + 4.&nbsp; It then returns C.&nbsp; So
+      the function equals 7.&nbsp; Since this is a number function you could
+      store the value in a number variable or use PRINT to output the value to
+      the console.<br>
+      <br>
+      <br>
+      &nbsp;&nbsp;&nbsp; To make a string function you simply add $ to the end
+      of the function name when you create it just like with variables and
+      arrays.<br>
+      <br>
+      &nbsp;&nbsp;&nbsp; FUNCTION MYSTRING$ ( G$ )<br>
+      &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; RETURN "YOU ENTERED " + G$<br>
+      &nbsp;&nbsp;&nbsp; END FUNCTION<br>
+      <br>
+      &nbsp;&nbsp;&nbsp; PRINT MYSTRING("SOMETHING")<br>
+      <br>
+      &nbsp;&nbsp;&nbsp; The above code should output the following:<br>
+      <br>
+      &nbsp;&nbsp;&nbsp; YOU ENTERED SOMETHING<br>
+      <br>
+      &nbsp;&nbsp;&nbsp; Sub Routines are created using the SUB keyword.&nbsp;
+      Look at the following:<br>
+      <br>
+      &nbsp;&nbsp;&nbsp; SUB MYSUB ( )<br>
+      &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; FOR I = 1 TO 5<br>
+      &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; PRINT I<br>
+      &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; NEXT<br>
+      &nbsp;&nbsp;&nbsp; END SUB<br>
+      <br>
+      &nbsp;&nbsp;&nbsp; MYSUB ( )<br>
+      <br>
+      &nbsp;&nbsp;&nbsp; The code above creates a Sub Routine called MYSUB which
+      uses a FOR loop to output the numbers 1 to 5 to the console.<br>
+      <br>
+      &nbsp;&nbsp;&nbsp; Functions and Sub Routines pass variables by value by
+      default.&nbsp; Look at the following:<br>
+      <br>
+      &nbsp;&nbsp;&nbsp; SUB&nbsp; MYSUB ( A )<br>
+      &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; A = 5<br>
+      &nbsp;&nbsp;&nbsp; END SUB<span  style="text-decoration: underline;"></span></div>
+    <div  style="text-align: left;"><span  style="text-decoration: underline;"></span></div>
+    <br>
+    &nbsp;&nbsp;&nbsp; N = 0<br>
+    <br>
+    &nbsp;&nbsp;&nbsp; MYSUB ( N )<br>
+    &nbsp;&nbsp;&nbsp; PRINT N<br>
+    <br>
+    &nbsp;&nbsp;&nbsp; In the above code the Sub Routine has a variable called A
+    as an argument.&nbsp; It sets A equal to 5.&nbsp; Then we create a variable
+    called N outside of the Sub Routine and set N equal to 0. N is passed as an
+    argument to MYSUB.&nbsp; Then N is output to the console.&nbsp; This will
+    output 0 to the console.&nbsp; That is because only the value of N is passed
+    to MYSUB so MYSUB is not able to change N itself.&nbsp; In order to allow
+    MYSUB to change N we must have MYSUB accept an argument by Reference.&nbsp;
+    To do this we will use the BYREF keyword.<br>
+    <br>
+    &nbsp;&nbsp;&nbsp; SUB MYSUB ( BYREF A )<br>
+    &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; A = 5<br>
+    &nbsp;&nbsp;&nbsp; END SUB<br>
+    <br>
+    &nbsp;&nbsp;&nbsp; N = 0<br>
+    <br>
+    &nbsp;&nbsp;&nbsp; MYSUB ( N )<br>
+    &nbsp;&nbsp;&nbsp; PRINT N<br>
+    <br>
+    &nbsp;&nbsp;&nbsp; The above code is the same as the previous example except
+    that now we use the BYREF keyword to change a to a reference rather than a
+    value.&nbsp; This means the when we pass the variable N to MYSUB, instead of
+    the value stored in N being used as A, whatever we do to A will be done to N
+    directly.&nbsp; This example will output 5 to the console.
+  </body>
+</html>

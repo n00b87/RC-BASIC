@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta  content="text/html; charset=UTF-8"  http-equiv="content-type">
+    <title>RC BASIC Flow Control</title>
+  </head>
+  <body><span  style="text-decoration: underline;">FLOW CONTROL<br>
+    </span> <span  style="text-decoration: underline;"><br>
+    </span>&nbsp;&nbsp;&nbsp; RC BASIC uses the same conventions of other
+    programming languages to control the flow of the program.&nbsp; There are
+    two main ways of getting your program to decide on its next course of
+    action.&nbsp; The most common way is with the IF statement block.<br>
+    <br>
+    &nbsp;&nbsp;&nbsp; IF 5 &gt; 6 THEN<br>
+    &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; PRINT "THIS WILL NOT PRINT"<br>
+    &nbsp;&nbsp;&nbsp; ELSEIF 5 &lt; 6 THEN<br>
+    &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; PRINT "THIS WILL PRINT"<br>
+    &nbsp;&nbsp;&nbsp; ELSE<br>
+    &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; PRINT "THIS ALSO WILL NOT PRINT"<br>
+    &nbsp;&nbsp;&nbsp; END IF<br>
+    <br>
+    &nbsp;&nbsp;&nbsp; The above example does different comparisons and will
+    output text to a console depending on which condition is true.<br>
+    <br>
+    &nbsp;&nbsp;&nbsp; The next method of control flow is the SELECT statement
+    block.<br>
+    <br>
+    &nbsp;&nbsp;&nbsp; SELECT CASE 5<br>
+    &nbsp;&nbsp;&nbsp; CASE 6<br>
+    &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; PRINT "THIS WILL NOT PRINT"<br>
+    &nbsp;&nbsp;&nbsp; CASE 5<br>
+    &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; PRINT "THIS WILL PRINT"<br>
+    &nbsp;&nbsp;&nbsp; DEFAULT<br>
+    &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; PRINT "THIS WILL NOT PRINT"<br>
+    &nbsp;&nbsp;&nbsp; END SELECT<br>
+    <br>
+    &nbsp;&nbsp;&nbsp; The above example will compare each case in the block to
+    the SELECT CASE.&nbsp; If the case is equal to the select case then the code
+    in that case will be executed.
+  </body>
+</html>

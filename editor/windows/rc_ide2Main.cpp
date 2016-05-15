@@ -89,13 +89,13 @@ int rc_current_page = 0;
 wxString rc_fnames[999];
 wxString rc_path = _("");//_("/home/cunningham/Desktop/alt_platforms/rc_ide/rc_ide/bin/Debug/");
 wxString rc_keywords = _("");
+wxString rc_keywords2 = _("");
 wxFont rc_font;
 int rc_nline = 0;
 
 void rc_initKeywords()
 {
-    rc_keywords = wxT("mod and or xor shl shr not true false text_input text_output text_append text_input_plus text_output_plus text_append_plus ");
-    rc_keywords += wxT("binary_input binary_output binary_append binary_input_plus binary_output_plus binary_append_plus ");
+    rc_keywords = wxT("include mod and or xor shl shr not true false ");
     rc_keywords += wxT("if then else elseif end select case default do loop until while wend for to step next exit function return sub byref print dim ");
     rc_keywords += wxT("fprint input input$ arraydim arraysize delete asc chr chr$ insert insert$ instr lcase lcase$ left left$ length ltrim ltrim$ mid mid$ ");
     rc_keywords += wxT("replace replace$ replacesubstr replacesubstr$ reverse reverse$ right right$ rtrim rtrim$ fillstring fillstring$ str str$ tally trim trim$ ucase ucase$ val ");
@@ -120,7 +120,24 @@ void rc_initKeywords()
     rc_keywords += wxT("readinput_settext gettouchfinger numfingers loadimage_ex rect rectfill os os$ numjoybuttons numjoyaxes ");
     rc_keywords += wxT("loadvideo playvideo pausevideo stopvideo setvideoposition resumevideo videoposition deletevideo deletemusic ");
     rc_keywords += wxT("system videoisplaying roundrect roundrectfill videoend getvideostats setvideodrawrect getvideodrawrect ");
-    rc_keywords += wxT("getvideosize videoexists setvideoalpha createsound command command$ numcommands str_f str_f$ str_s str_s$ cls env env$ setenv prefpath prefpath$ ");
+    rc_keywords += wxT("getvideosize videoexists setvideoalpha createsound command command$ numcommands str_f str_f$ str_s str_s$ cls env env$ setenv prefpath prefpath$ numjoyhats joyhat numjoytrackballs getjoytrackball ");
+    rc_keywords += wxT("windowhasinputfocus windowhasmousefocus push_n push_s pop_n pop_s pop_s$ n_stack_size s_stack_size joystickisconnected ");
+
+    rc_keywords2 = wxT("k_0 k_1 k_2 k_3 k_4 k_5 k_6 k_7 k_8 k_9 k_a k_ac_back k_ac_bookmarks k_ac_forward k_ac_home k_ac_refresh k_ac_search k_ac_stop k_again k_alterase k_application ");
+    rc_keywords2 += wxT("k_audiomute k_audionext k_audioplay k_audioprev k_audiostop k_b k_backslash k_backspace k_brightnessdown k_brightnessup k_c k_calculator k_cancel k_capslock k_clear ");
+    rc_keywords2 += wxT("k_clearagain k_computer k_copy k_crsel k_currencysubunit k_currencyunit k_cut k_d k_decimalseparator k_delete k_displayswitch k_down k_e k_eject k_end k_equal k_escape ");
+    rc_keywords2 += wxT("k_execute k_exsel k_f k_f1 k_f2 k_f3 k_f4 k_f5 k_f6 k_f7 k_f8 k_f9 k_f10 k_f11 k_f12 k_f13 k_f14 k_f15 k_f16 k_f17 k_f18 k_f19 k_f20 k_f21 k_f22 k_f23 k_f24 k_find k_g ");
+    rc_keywords2 += wxT("k_grave k_h k_help k_home k_i k_insert k_j k_k k_kbdllumdown k_kbdllumtoggle k_kbdllumup keypad_0 keypad_00 keypad_000 keypad_1 keypad_2 keypad_3 keypad_4 keypad_5 ");
+    rc_keywords2 += wxT("keypad_6 keypad_7 keypad_8 keypad_9 keypad_a keypad_ampersand keypad_at keypad_b keypad_backspace keypad_binary keypad_c keypad_clear keypad_clearentry keypad_colon ");
+    rc_keywords2 += wxT("keypad_comma keypad_d keypad_dblampersand keypad_dblverticalbar keypad_decimal keypad_divide keypad_e keypad_enter keypad_equal keypad_equalas400 keypad_exclam keypad_f ");
+    rc_keywords2 += wxT("keypad_greater keypad_hash keypad_hexadecimal keypad_leftbrace keypad_leftparen keypad_less keypad_memadd keypad_memclear keypad_memdivide keypad_memmultiply ");
+    rc_keywords2 += wxT("keypad_memrecall keypad_memstore keypad_memsubtract keypad_minus keypad_multiply keypad_octal keypad_percent keypad_period keypad_plus keypad_plusminus keypad_power ");
+    rc_keywords2 += wxT("keypad_rightbrace keypad_rightparen keypad_space keypad_tab keypad_verticalbar keypad_xor k_l k_lalt k_lctrl k_left k_leftbracket k_lgui k_leftshift k_m k_mail ");
+    rc_keywords2 += wxT("k_mediaselect k_menu k_minus k_modeswitch k_mute k_n k_numlock k_o k_oper k_out k_p k_pagedown k_pageup k_paste k_pause k_power k_printscreen k_prior k_q k_r k_ralt ");
+    rc_keywords2 += wxT("k_rctrl k_return k_return2 k_rgui k_right k_rightbracket k_rshift k_s k_scrolllock k_select k_semicolon k_separator k_slash k_sleep k_space k_stop k_sysreq k_t k_tab ");
+    rc_keywords2 += wxT("k_thousandseparator k_u k_undo k_unknown k_up k_v k_volumedown k_volumeup k_w k_www k_x k_y k_z windowpos_centered hat_up hat_down hat_left hat_right hat_rightup ");
+    rc_keywords2 += wxT("hat_rightdown hat_leftup hat_leftdown hat_centered text_input text_output text_append text_input_plus text_output_plus text_append_plus ");
+    rc_keywords2 += wxT("binary_input binary_output binary_append binary_input_plus binary_output_plus binary_append_plus ");
 }
 
 rc_ide2Frame::rc_ide2Frame(wxWindow* parent,wxWindowID id)
@@ -246,7 +263,7 @@ void rc_ide2Frame::OnQuit(wxCommandEvent& event)
 
 void rc_ide2Frame::OnAbout(wxCommandEvent& event)
 {
-    wxString msg = _("RC BASIC v2.0\nCopyright (C) 2015-2016 Rodney Cunningham\n\nFor latest release, updates, and info go to http://www.rcbasic.com");
+    wxString msg = _("RC BASIC v2.0.5\nCopyright (C) 2015-2016 Rodney Cunningham\n\nFor latest release, updates, and info go to http://www.rcbasic.com");
     wxMessageBox(msg);
 }
 
@@ -260,12 +277,14 @@ void rc_ide2Frame::OnNewPage(wxCommandEvent& event)
     rc_txtCtrl->SetMarginWidth(0, 40);
     rc_txtCtrl->SetUndoCollection(true);
     rc_txtCtrl->EmptyUndoBuffer();
-    rc_txtCtrl->SetLexer(wxSTC_LEX_POWERBASIC);
-    rc_txtCtrl->StyleSetForeground(wxSTC_B_KEYWORD, wxColour(0, 0, 200));
+    rc_txtCtrl->SetLexer(wxSTC_LEX_FREEBASIC);
+    rc_txtCtrl->StyleSetForeground(wxSTC_B_KEYWORD, wxColour(0, 0, 210));
+    rc_txtCtrl->StyleSetForeground(wxSTC_B_KEYWORD2, wxColour(0, 180, 0));
     rc_txtCtrl->StyleSetForeground(wxSTC_B_NUMBER, wxColour(200, 40, 40));
-    rc_txtCtrl->StyleSetForeground(wxSTC_B_STRING, wxColour(0, 140, 0));
+    rc_txtCtrl->StyleSetForeground(wxSTC_B_STRING, wxColour(230, 10, 230));
     rc_txtCtrl->StyleSetForeground(wxSTC_B_COMMENT, wxColour(128,128,128));
     rc_txtCtrl->SetKeyWords(0, rc_keywords);
+    rc_txtCtrl->SetKeyWords(1, rc_keywords2);
     wxFont rc_font(12,wxFONTFAMILY_TELETYPE,wxFONTSTYLE_NORMAL,wxFONTWEIGHT_NORMAL);
     rc_txtCtrl->StyleSetFont(wxSTC_STYLE_DEFAULT, rc_font);
     rc_txtCtrl->SetTabWidth(4);
@@ -327,12 +346,14 @@ void rc_ide2Frame::OnPageOpen(wxCommandEvent& event)
             rc_txtCtrl->SetMarginWidth(0, 40);
             rc_txtCtrl->SetUndoCollection(true);
             rc_txtCtrl->EmptyUndoBuffer();
-            rc_txtCtrl->SetLexer(wxSTC_LEX_POWERBASIC);
-            rc_txtCtrl->StyleSetForeground(wxSTC_B_KEYWORD, wxColour(0, 0, 200));
+            rc_txtCtrl->SetLexer(wxSTC_LEX_FREEBASIC);
+            rc_txtCtrl->StyleSetForeground(wxSTC_B_KEYWORD, wxColour(0, 0, 210));
+            rc_txtCtrl->StyleSetForeground(wxSTC_B_KEYWORD2, wxColour(0, 180, 0));
             rc_txtCtrl->StyleSetForeground(wxSTC_B_NUMBER, wxColour(200, 40, 40));
-            rc_txtCtrl->StyleSetForeground(wxSTC_B_STRING, wxColour(0, 140, 0));
+            rc_txtCtrl->StyleSetForeground(wxSTC_B_STRING, wxColour(230, 10, 230));
             rc_txtCtrl->StyleSetForeground(wxSTC_B_COMMENT, wxColour(128,128,128));
             rc_txtCtrl->SetKeyWords(0, rc_keywords);
+            rc_txtCtrl->SetKeyWords(1, rc_keywords2);
             wxFont rc_font(12,wxFONTFAMILY_TELETYPE,wxFONTSTYLE_NORMAL,wxFONTWEIGHT_NORMAL);
             rc_txtCtrl->StyleSetFont(wxSTC_STYLE_DEFAULT, rc_font);
             rc_txtCtrl->SetTabWidth(4);

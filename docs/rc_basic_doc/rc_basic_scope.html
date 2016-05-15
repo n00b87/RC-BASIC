@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta  content="text/html; charset=UTF-8"  http-equiv="content-type">
+    <title>RC BASIC Scope</title>
+  </head>
+  <body>
+    <div  style="text-align: center;"><span  style="text-decoration: underline;">SCOPE</span><br>
+      <span  style="text-decoration: underline;"></span></div>
+    <span  style="text-decoration: underline;"> <br>
+    </span> &nbsp;&nbsp;&nbsp; Scope refers to where you are able to access a
+    variable.&nbsp; Basically variables cannot be accessed from outside the
+    scope they are created in.&nbsp; Look at the following:<br>
+    <br>
+    &nbsp;&nbsp;&nbsp; A = 5<br>
+    <br>
+    &nbsp;&nbsp;&nbsp; WHILE A &lt; 10<br>
+    &nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; B = 1&nbsp;&nbsp;&nbsp;
+    -----&nbsp; B is created inside this loop and cannot be accessed outside of
+    this loop<br>
+    &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; A = A + 1&nbsp; ----- A was created
+    before this loop started so it will be able to be used after this loop ends<br>
+    &nbsp;&nbsp;&nbsp; WEND<br>
+    <br>
+    &nbsp;&nbsp;&nbsp; PRINT B<br>
+    <br>
+    &nbsp;&nbsp;&nbsp; The above program WILL NOT COMPILE.&nbsp; That is because
+    the variable B was created inside the scope of the WHILE loop and nothing
+    outside the WHILE loop will be able to access it.&nbsp; The variable A was
+    created outside the WHILE loop so the variable A could be used anywhere in
+    this example.&nbsp; So a variable can go into a deeper scope than where it
+    was created but it cannot go to a lesser scope than where it was
+    created.&nbsp; A scope deepens every time a new block is started.&nbsp;
+    Blocks refer to the code within a loop, within a Function, or within a Sub
+    Routine.
+  </body>
+</html>
