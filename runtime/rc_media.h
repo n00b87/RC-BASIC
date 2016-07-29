@@ -57,7 +57,7 @@ const int SCREEN_HEIGHT = 480;
 
 const int MAX_WINDOWS = 1;  //8
 const int MAX_SCREENS = 16; //32
-const int MAX_IMAGES = 32768; //65536;
+const int MAX_IMAGES = 4096; //65536;
 const int MAX_SPRITES = 32; //1024;
 const int MAX_SOUNDS = 1024;
 const int MAX_MUSIC = 1;
@@ -70,7 +70,7 @@ const int SCREEN_HEIGHT = 480;
 
 const int MAX_WINDOWS = 8;  //8
 const int MAX_SCREENS = 16; //32
-const int MAX_IMAGES = 32768; //65536;
+const int MAX_IMAGES = 4096; //65536;
 const int MAX_SPRITES = 32; //1024;
 const int MAX_SOUNDS = 1024;
 const int MAX_MUSIC = 1;
@@ -79,6 +79,7 @@ const int MAX_FONTS = 32;
 #endif // RC_ANDROID
 
 SDL_Window * rc_win[MAX_WINDOWS];
+int rc_win_event[MAX_WINDOWS];
 SDL_Texture * rc_backBuffer[MAX_WINDOWS];
 SDL_Rect rc_bb_rect[MAX_WINDOWS];
 SDL_Surface * rc_win_surface[MAX_WINDOWS];
@@ -219,6 +220,7 @@ bool rc_textinput_flag = true;
 bool rc_textinput_isActive = false;
 int rc_textinput_waitHold = 800;
 bool rc_textinput_hold = false;
+bool rc_toggleBackspace = true;
 
 
 static Uint32 baseticks = 0;
@@ -372,6 +374,7 @@ bool rc_media_init(string rc_path)
         else
         {
             rc_joystick[i] = NULL;
+            rc_joyID[i] = -1;
         }
     }
     SDL_SetHint("SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS", "1");
@@ -663,12 +666,6 @@ inline void rc_media_setActiveWindow(int win_num)
         cout << "Window Index Out of Range" << endl;
         return;
     }
-    if(rc_win[win_num]==NULL)
-    {
-        cout << "Window does not Exist" << endl;
-        return;
-    }
-    //cout << "Set window #" << win_num << endl;
     rc_active_window = win_num;
 }
 
@@ -681,7 +678,7 @@ void rc_media_raiseWindow(int win_num)
     }
     if(rc_win[win_num]==NULL)
     {
-        cout << "Window does not Exist" << endl;
+        //cout << "Window does not Exist" << endl;
         return;
     }
     rc_active_window = win_num;
@@ -697,7 +694,7 @@ void rc_media_showWindow(int win_num)
     }
     if(rc_win[win_num]==NULL)
     {
-        cout << "Window does not Exist" << endl;
+        //cout << "Window does not Exist" << endl;
         return;
     }
     SDL_ShowWindow(rc_win[win_num]);
@@ -712,7 +709,7 @@ void rc_media_hideWindow(int win_num)
     }
     if(rc_win[win_num]==NULL)
     {
-        cout << "Window does not Exist" << endl;
+        //cout << "Window does not Exist" << endl;
         return;
     }
     SDL_HideWindow(rc_win[win_num]);
@@ -727,7 +724,7 @@ bool rc_winCheck(int win_num)
     }
     if(rc_win[win_num]==NULL)
     {
-        cout << "Window does not Exist" << endl;
+        //cout << "Window does not Exist" << endl;
         return false;
     }
     return true;
@@ -753,7 +750,7 @@ string rc_media_getWindowTitle(int win_num)
     }
     else
     {
-        cout << "GetWindowTitle Error: Window #" << win_num << " is not an active window" << endl;
+        cout << "WindowTitle Error: Window #" << win_num << " is not an active window" << endl;
         return "";
     }
 }
@@ -1057,6 +1054,26 @@ void rc_media_setWindowBordered(int win_num, SDL_bool bswitch)
         cout << "SetWindowBorder Error: Window #" << win_num << " is not an active window" << endl;
 }
 
+int rc_media_numWindows()
+{
+    int num = 0;
+    for(int i = 0; i < MAX_WINDOWS; i++)
+        if(rc_win[i])
+            num++;
+    return num;
+}
+
+bool rc_media_windowExists(int win_num)
+{
+    if(rc_winCheck(win_num))
+    {
+        if(rc_win[win_num])
+            return true;
+        return false;
+    }
+    return false;
+}
+
 void rc_media_restoreWindow(int win_num)
 {
     if(rc_winCheck(win_num))
@@ -1280,6 +1297,19 @@ void rc_media_getScreenClip_hw(int slot, int sx, int sy, int sw, int sh)
 {
     if(rc_screenCheck(rc_active_screen))
     {
+        SDL_RendererFlip rf = (SDL_RendererFlip)SDL_FLIP_VERTICAL;
+        int w = 0;
+        int h = 0;
+        SDL_QueryTexture(rc_hscreen[rc_active_window][rc_active_screen], NULL, NULL, &w, &h);
+        SDL_Texture * tmp_tex = SDL_CreateTexture(rc_win_renderer[rc_active_window], rc_pformat->format, SDL_TEXTUREACCESS_TARGET, w, h);
+        SDL_SetRenderTarget(rc_win_renderer[rc_active_window], tmp_tex);
+        SDL_SetRenderDrawColor(rc_win_renderer[rc_active_window], rc_clearColor>>16, rc_clearColor>>8, rc_clearColor, rc_clearColor>>24);
+        SDL_RenderClear(rc_win_renderer[rc_active_window]);
+        SDL_SetRenderDrawColor(rc_win_renderer[rc_active_window], rc_ink_color.r, rc_ink_color.g, rc_ink_color.b, rc_ink_color.a);
+        SDL_Point center;
+        center.x = w/2;
+        center.y = h/2;
+        SDL_RenderCopyEx(rc_win_renderer[rc_active_window], rc_hscreen[rc_active_window][rc_active_screen], NULL, NULL, 0, &center,rf);
         SDL_Surface * img_surf = SDL_CreateRGBSurface(0, sw, sh, 32, 0, 0, 0, 0);
         SDL_Rect src_rect;
         src_rect.x = sx;
@@ -1288,6 +1318,8 @@ void rc_media_getScreenClip_hw(int slot, int sx, int sy, int sw, int sh)
         src_rect.h = sh;
         //SDL_BlitSurface(rc_sscreen[rc_active_window][src_screen], &src_rect, rc_sscreen[rc_active_window][dst_screen], &dst_rect);
         SDL_RenderReadPixels(rc_win_renderer[rc_active_window], &src_rect, rc_pformat->format, img_surf->pixels, img_surf->pitch);
+        SDL_SetRenderTarget(rc_win_renderer[rc_active_window], rc_hscreen[rc_active_window][rc_active_screen]);
+        SDL_DestroyTexture(tmp_tex);
 
         for(int i = 0; i < MAX_WINDOWS; i++)
         {
@@ -2783,6 +2815,69 @@ string rc_media_inputS_hw(string prompt)
     sub_line.w = 0;
     sub_line.h = 8;
     SDL_SetRenderTarget(rc_win_renderer[rc_active_window], NULL);
+
+    if(in_buf.length()>0)
+    {
+        tc = in_buf;
+        i = 0;
+        int x = rc_sConsole_x[rc_active_window];
+        if(x >= rc_console_width[rc_active_window])
+            x = 0;
+
+        while(tc.compare("")!=0)
+        {
+            if(tc.length() > ( rc_console_width[rc_active_window] - x) )
+            {
+                t_out[i] = rc_fillSpace(x) + tc.substr(0, rc_console_width[rc_active_window] - x);
+                if(i == 0 && ((t_out[i].length() - prompt.length() - x)*8) > first_line.w)
+                {
+                    first_line.w = (t_out[i].length() - prompt.length() - x) * 8;
+                }
+                else if(i != 0 && (t_out[i].length() * 8) > sub_line.w)
+                {
+                    sub_line.w = t_out[i].length() * 8;
+                }
+                tc = tc.substr( (rc_console_width[rc_active_window] - x) );
+                x = 0;
+                i++;
+            }
+            else
+            {
+                t_out[i] = rc_fillSpace(x) + tc;
+                if(i == 0 && ((t_out[i].length() - prompt.length() - x)*8) > first_line.w)
+                {
+                    first_line.w = (t_out[i].length() - prompt.length() - x) * 8;
+                }
+                else if(i != 0 && (t_out[i].length() * 8) > sub_line.w)
+                {
+                    sub_line.w = t_out[i].length() * 8;
+                }
+                x = 0;
+                i++;
+                break;
+            }
+            if(i >= rc_console_height[rc_active_window])
+                break;
+        }
+
+        SDL_SetRenderDrawColor(rc_win_renderer[rc_active_window], rc_clearColor>>16, rc_clearColor>>8, rc_clearColor, rc_clearColor>>24);
+        SDL_RenderFillRect(rc_win_renderer[rc_active_window], &first_line);
+
+        if(((i-1)*8) > sub_line.h)
+            sub_line.h = i*8;
+
+        if(sub_line.h > 0)
+            SDL_RenderFillRect(rc_win_renderer[rc_active_window], &sub_line);
+
+        SDL_SetRenderDrawColor(rc_win_renderer[rc_active_window], rc_ink_color.r, rc_ink_color.g, rc_ink_color.b, rc_ink_color.a);
+
+        for(int n = 0; n < i; n++)
+        {
+            stringRGBA(rc_win_renderer[rc_active_window], 0, (rc_sConsole_y[rc_active_window] + n) * 8, t_out[n].c_str(), rc_ink_color.r, rc_ink_color.g, rc_ink_color.b, rc_ink_color.a);
+        }
+        SDL_RenderPresent(rc_win_renderer[rc_active_window]);
+    }
+
     while(loop)
     {
         if(SDL_WaitEvent(&in_evt))
@@ -3127,23 +3222,70 @@ int rc_getEvents()
             exit(0);
             break;
         case SDL_WINDOWEVENT:
-            switch(event.window.event)
+            if(event.window.event == SDL_WINDOWEVENT_RESIZED)
             {
-                case SDL_WINDOWEVENT_RESIZED:
-                    for(int i = 0; i < MAX_WINDOWS; i++)
+                for(int i = 0; i < MAX_WINDOWS; i++)
+                {
+                    if(rc_win_id[i] == event.window.windowID)
                     {
-                        if(rc_win_id[i] == event.window.windowID)
+                        rc_active_window = i;
+                        break;
+                    }
+                }
+            }
+            else if(event.window.event == SDL_WINDOWEVENT_CLOSE)
+            {
+                Uint32 win_id = -1;
+                for(int i = 0; i < MAX_WINDOWS; i++)
+                {
+                    if(rc_win[i])
+                    {
+                        win_id = SDL_GetWindowID(rc_win[i]);
+                        if(win_id == event.window.windowID)
                         {
-                            rc_active_window = i;
+                            rc_win_event[i] = 1;
+                            //rc_media_closeWindow_hw(i);
                             break;
                         }
+                        win_id = -1;
                     }
-                    break;
-                case SDL_WINDOWEVENT_CLOSE:
-                    SDL_PumpEvents();
-                    //rc_media_quit();
-                    exit(0);
-                    break;
+                }
+            }
+            else if(event.window.event == SDL_WINDOWEVENT_MINIMIZED)
+            {
+                Uint32 win_id = -1;
+                for(int i = 0; i < MAX_WINDOWS; i++)
+                {
+                    if(rc_win[i])
+                    {
+                        win_id = SDL_GetWindowID(rc_win[i]);
+                        if(win_id == event.window.windowID)
+                        {
+                            rc_win_event[i] = 2;
+                            //rc_media_closeWindow_hw(i);
+                            break;
+                        }
+                        win_id = -1;
+                    }
+                }
+            }
+            else if(event.window.event == SDL_WINDOWEVENT_MAXIMIZED)
+            {
+                Uint32 win_id = -1;
+                for(int i = 0; i < MAX_WINDOWS; i++)
+                {
+                    if(rc_win[i])
+                    {
+                        win_id = SDL_GetWindowID(rc_win[i]);
+                        if(win_id == event.window.windowID)
+                        {
+                            rc_win_event[i] = 3;
+                            //rc_media_closeWindow_hw(i);
+                            break;
+                        }
+                        win_id = -1;
+                    }
+                }
             }
             break;
         case SDL_TEXTINPUT:
@@ -3161,7 +3303,7 @@ int rc_getEvents()
             break;
         case SDL_KEYDOWN:
             if(rc_textinput_isActive && event.key.keysym.sym == SDLK_BACKSPACE && rc_textinput_string.length() > 0
-               && !rc_textinput_flag)
+               && !rc_textinput_flag && rc_toggleBackspace)
             {
                 rc_textinput_string = rc_textinput_string.substr(0, rc_textinput_string.length()-1);
                 //rc_textinput_timer = clock() / (double)(CLOCKS_PER_SEC / 1000);
@@ -3172,33 +3314,33 @@ int rc_getEvents()
             rc_inkey = event.key.keysym.sym;
             keyState = SDL_GetKeyboardState(NULL);
             break;
-        case SDL_MOUSEMOTION:
-            SDL_GetMouseState(&rc_mouseX, &rc_mouseY);
-            break;
+        //case SDL_MOUSEMOTION:
+            //SDL_GetMouseState(&rc_mouseX, &rc_mouseY);
+            //break;
         case SDL_MOUSEBUTTONUP:
-            SDL_GetMouseState(&rc_mouseX, &rc_mouseY);
+            //SDL_GetMouseState(&rc_mouseX, &rc_mouseY);
             rc_mbutton1 = 0;
             rc_mbutton2 = 0;
             rc_mbutton3 = 0;
-            break;
-//            switch(event.button.button)
-//            {
-//                case SDL_BUTTON_LEFT:
-//                    rc_mbutton1 = 1;
-//                    break;
-//                case SDL_BUTTON_MIDDLE:
-//                    rc_mbutton2 = 1;
-//                    break;
-//                case SDL_BUTTON_RIGHT:
-//                    rc_mbutton3 = 1;
-//                    break;
-//            }
+            //break;
+            switch(event.button.button)
+            {
+                case SDL_BUTTON_LEFT:
+                    rc_mbutton1 = 0;
+                    break;
+                case SDL_BUTTON_MIDDLE:
+                    rc_mbutton2 = 0;
+                    break;
+                case SDL_BUTTON_RIGHT:
+                    rc_mbutton3 = 0;
+                    break;
+            }
             break;
         case SDL_MOUSEBUTTONDOWN:
-            SDL_GetMouseState(&rc_mouseX, &rc_mouseY);
-            rc_mbutton1 = 0;
-            rc_mbutton2 = 0;
-            rc_mbutton3 = 0;
+            //SDL_GetMouseState(&rc_mouseX, &rc_mouseY);
+            //rc_mbutton1 = 0;
+            //rc_mbutton2 = 0;
+            //rc_mbutton3 = 0;
             switch(event.button.button)
             {
                 case SDL_BUTTON_LEFT:
@@ -3306,6 +3448,45 @@ int rc_getEvents()
     return g_events;
 }
 
+bool rc_media_windowEvent_Close(int win_num)
+{
+    if(rc_winCheck(win_num))
+    {
+        if(rc_win_event[win_num]==1)
+        {
+            //cout << "Window #" << win_num << " Close_Event" << endl;
+            return true;
+        }
+        else
+            return false;
+    }
+    return false;
+}
+
+bool rc_media_windowEvent_Minimize(int win_num)
+{
+    if(rc_winCheck(win_num))
+    {
+        if(rc_win_event[win_num]==2)
+            return true;
+        else
+            return false;
+    }
+    return false;
+}
+
+bool rc_media_windowEvent_Maximize(int win_num)
+{
+    if(rc_winCheck(win_num))
+    {
+        if(rc_win_event[win_num]==3)
+            return true;
+        else
+            return false;
+    }
+    return false;
+}
+
 void rc_media_getTouchFinger(int finger, double * x, double * y, double * pressure)
 {
     SDL_Finger * rc_finger = SDL_GetTouchFinger(rc_touchDevice, finger);
@@ -3403,6 +3584,11 @@ void rc_media_ReadInput_SetText(string txt)
     rc_textinput_string = txt;
 }
 
+void rc_media_ReadInput_ToggleBackspace(bool flag)
+{
+    rc_toggleBackspace = flag;
+}
+
 int rc_media_inkey()
 {
     int k = rc_inkey;
@@ -3474,11 +3660,11 @@ bool rc_media_mouseIsVisible()
 
 void rc_media_getMouse(double * x, double * y, double * mb1, double * mb2, double * mb3)
 {
+    SDL_GetMouseState(&rc_mouseX,&rc_mouseY);
     //SDL_PumpEvents();
     *mb1 = rc_mbutton1;
     *mb2 = rc_mbutton2;
     *mb3 = rc_mbutton3;
-    int x_data, y_data;
     *x = rc_mouseX;
     *y = rc_mouseY;
     return;
@@ -3551,6 +3737,7 @@ void rc_media_updateWindow_hw()
             SDL_RenderCopy(rc_win_renderer[rc_active_window], rc_hscreen[rc_active_window][s_num], &rc_screenview[rc_active_window][s_num], &rc_screen_rect[rc_active_window][s_num]);
         }
     }
+    //cout << endl;
     SDL_SetRenderTarget(rc_win_renderer[rc_active_window], NULL);
     #ifdef RC_ANDROID
     SDL_RenderCopy(rc_win_renderer[rc_active_window], rc_backBuffer[rc_active_window], NULL, NULL);

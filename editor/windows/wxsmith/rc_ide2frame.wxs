@@ -10,7 +10,7 @@
 		<object class="wxBoxSizer" variable="BoxSizer1" member="no">
 			<object class="sizeritem">
 				<object class="wxAuiNotebook" name="ID_AUINOTEBOOK1" variable="AuiNotebook1" member="yes" />
-				<flag>wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
+				<flag>wxALL|wxEXPAND</flag>
 				<border>1</border>
 				<option>1</option>
 			</object>
@@ -129,6 +129,12 @@
 				<bitmap>img\player_play.png</bitmap>
 				<longhelp>Run Program</longhelp>
 				<handler function="OnRun" entry="EVT_TOOL" />
+			</object>
+			<object class="tool" name="toolStopID" variable="ToolBarItem6" member="yes">
+				<label>Stop Program</label>
+				<bitmap stock_id="wxART_ERROR" />
+				<longhelp>Stops Program</longhelp>
+				<handler function="OnStop" entry="EVT_TOOL" />
 			</object>
 		</object>
 	</object>

@@ -542,6 +542,11 @@
 #define PUSH_N_N 411
 #define PUSH_S_S_STR 72
 #define JOYSTICKISCONNECTED_JOY_NUM 412
+#define WINDOWEXISTS_WIN 413
+#define READINPUT_TOGGLEBACKSPACE_FLAG 414
+#define WINDOWEVENT_CLOSE_WIN 415
+#define WINDOWEVENT_MINIMIZE_WIN 416
+#define WINDOWEVENT_MAXIMIZE_WIN 417
 
 #define RC_LOOP_BREAK 50
 
@@ -4211,9 +4216,10 @@ inline void rc_vm_je()
     {
         case 0:
             if(rc_vm_system_id[RC_EQUAL_FLAG])
-            RC_CURRENT_ADDRESS = rc_segment_getUInt(RC_CURRENT_SEGMENT, RC_CURRENT_ADDRESS);
+                RC_CURRENT_ADDRESS = rc_segment_getUInt(RC_CURRENT_SEGMENT, RC_CURRENT_ADDRESS);
             else
                 RC_CURRENT_ADDRESS+=vm_data_size;
+            //cout << "Final Address = " << RC_CURRENT_ADDRESS << endl;
             return;
         case 1:
             if(rc_vm_system_id[RC_EQUAL_FLAG])
@@ -4697,10 +4703,11 @@ inline void rc_vm_dim_str()
 
 inline void rc_vm_print()
 {
+    //cout << "print" << endl;
     unsigned int i_val1;
     char arg_type1 = RC_SEGMENT[RC_CURRENT_SEGMENT][RC_CURRENT_ADDRESS];
-    string m_str = "";
-    stringstream ss;
+    //string m_str = "";
+    //stringstream ss;
     RC_CURRENT_ADDRESS++;
     switch(arg_type1)
     {
@@ -5233,7 +5240,7 @@ inline int rc_intern_fileReadByte()
 {
     unsigned char buf;
     unsigned char rb = SDL_RWread(rc_fstream[(int)rc_nid[READBYTE_STREAM][0]], &buf, 1, 1);
-    return (int)rb;
+    return (int)buf;
 }
 
 inline int rc_intern_fileWriteByte()
@@ -5469,10 +5476,10 @@ inline string rc_intern_OS()
 {
     #ifdef RC_LINUX
         return "LINUX";
-    #elifdef RC_ANDROID
+    #endif // RC_LINUX
+
+    #ifdef RC_ANDROID
         return "ANDROID";
-    #else
-        return "";
     #endif // RC_LINUX
 }
 
@@ -6791,6 +6798,29 @@ inline void rc_vm_intern()
             rc_num_stack[rc_num_stack_index] = rc_media_joystickIsConnected((int)rc_nid[JOYSTICKISCONNECTED_JOY_NUM][0]);
             rc_num_stack_index++;
             break;
+        case 307:
+            rc_num_stack[rc_num_stack_index] = rc_media_numWindows();
+            rc_num_stack_index++;
+            break;
+        case 308:
+            rc_num_stack[rc_num_stack_index] = rc_media_windowExists((int)rc_nid[WINDOWEXISTS_WIN][0]);
+            rc_num_stack_index++;
+            break;
+        case 309:
+            rc_media_ReadInput_ToggleBackspace((bool)rc_nid[READINPUT_TOGGLEBACKSPACE_FLAG][0]);
+            break;
+        case 310:
+            rc_num_stack[rc_num_stack_index] = rc_media_windowEvent_Close((int)rc_nid[WINDOWEVENT_CLOSE_WIN][0]);
+            rc_num_stack_index++;
+            break;
+        case 311:
+            rc_num_stack[rc_num_stack_index] = rc_media_windowEvent_Minimize((int)rc_nid[WINDOWEVENT_MINIMIZE_WIN][0]);
+            rc_num_stack_index++;
+            break;
+        case 312:
+            rc_num_stack[rc_num_stack_index] = rc_media_windowEvent_Maximize((int)rc_nid[WINDOWEVENT_MAXIMIZE_WIN][0]);
+            rc_num_stack_index++;
+            break;
 
 
         default:
@@ -6945,6 +6975,7 @@ bool rc_checkEvent()
 
 inline int rc_vm_run()
 {
+    //rc_align_address();
     int rn_val = 1;
     rc_ushort vm_cmd;
     vm_cmd.s = rc_segment_getUShort(RC_CURRENT_SEGMENT, RC_CURRENT_ADDRESS);
@@ -6960,6 +6991,7 @@ inline int rc_vm_run()
     {
         //cout << "mov" << endl;
         rc_vm_mov();
+        //cout << "done" << endl;
     }
     else if(vm_cmd.s == 33) //mov$
     {
@@ -7004,7 +7036,9 @@ inline int rc_vm_run()
     }
     else if(vm_cmd.s == 43) //mul
     {
+        //cout << "compare" << endl;
         rc_vm_cmp();
+        //cout << "done" << endl;
     }
     else if(vm_cmd.s == 44) //mul
     {
@@ -7037,6 +7071,7 @@ inline int rc_vm_run()
     {
         //cout << "pop" << endl;
         rc_vm_pop();
+        //cout << "fo shizzle" << endl;
     }
     else if(vm_cmd.s == 51) //mul
     {
@@ -7105,7 +7140,9 @@ inline int rc_vm_run()
     }
     else if(vm_cmd.s == 69) //mul
     {
+        //cout << "jump if equal" << endl;
         rc_vm_je();
+        //cout << "done" << endl;
     }
     else if(vm_cmd.s == 70) //mul
     {
@@ -7214,11 +7251,14 @@ inline int rc_vm_run()
                 cycleVideo();
                 if(rc_checkEvent())
                 {
+                    for(int i = 0; i < MAX_WINDOWS; i++)
+                        rc_win_event[i] = 0;
                     while(rc_getEvents()){}
+                    //rc_getEvents();
                     #ifndef RC_WINDOWS
                         SDL_PumpEvents();
                     #endif // RC_WINDOWS
-                    SDL_FlushEvents(SDL_FIRSTEVENT, SDL_LASTEVENT);
+                    //SDL_FlushEvents(SDL_FIRSTEVENT, SDL_LASTEVENT);
                 }
                 rc_vm_f[i_val3] = rc_vm_stack.top();
                 rc_vm_stack.pop();
@@ -7309,11 +7349,14 @@ inline int rc_vm_run()
                 cycleVideo();
                 if(rc_checkEvent())
                 {
+                    for(int i = 0; i < MAX_WINDOWS; i++)
+                        rc_win_event[i] = 0;
                     while(rc_getEvents()){}
+                    //rc_getEvents();
                     #ifndef RC_WINDOWS
                         SDL_PumpEvents();
                     #endif // RC_WINDOWS
-                    SDL_FlushEvents(SDL_FIRSTEVENT, SDL_LASTEVENT);
+                    //SDL_FlushEvents(SDL_FIRSTEVENT, SDL_LASTEVENT);
                 }
                 rc_vm_f[i_val3] = rc_vm_stack.top();
                 rc_vm_stack.pop();
@@ -7430,11 +7473,18 @@ inline int rc_vm_run()
 
             //rc_textinput_flag = false;
             cycleVideo();
+            //cout << "video cycled" << endl;
             if(rc_checkEvent())
             {
                 //rc_textinput_flag = false;
+                //cout << "event start" << endl;
+                for(int i = 0; i < MAX_WINDOWS; i++)
+                    rc_win_event[i] = 0;
 
                 while(rc_getEvents()){}
+                //rc_getEvents();
+
+                //cout << "event end" << endl;
 //                if(rc_textinput_string.length()!=rc_text_len)
 //                {
 //                    //cout << "loop [" << r_loop << "] string = " << rc_textinput_string << endl;
@@ -7444,11 +7494,13 @@ inline int rc_vm_run()
                 #ifndef RC_WINDOWS
                     SDL_PumpEvents();
                 #endif // RC_WINDOWS
+
+                //cout << "pumped" << endl;
                 //SDL_FlushEvent(SDL_TEXTINPUT);
-                SDL_FlushEvents(SDL_FIRSTEVENT, SDL_LASTEVENT);
+                //SDL_FlushEvents(SDL_FIRSTEVENT, SDL_LASTEVENT);
                 //SDL_Delay(5);
             }
-
+            //cout << "start loop" << endl;
             while(true)
             {
                 w_err = rc_vm_run();
@@ -7460,11 +7512,12 @@ inline int rc_vm_run()
                 }
                 else if(w_err == -1)
                 {
-                    //cout << "ERROR in WHILE\n";
+                    cout << "ERROR in WHILE\n";
                     return -1;
                 }
                 else if(w_err == 89)
                 {
+                    //cout << "in while" << endl;
                     //RC_CURRENT_ADDRESS = st_addr;
                     break;
                 }
@@ -7512,7 +7565,7 @@ inline int rc_vm_run()
 //            }
         }
 
-        //cout << "Loop end\n"; string s; cin >> s;
+        //cout << "RB_RT: Loop end\n";
         //RC_CURRENT_ADDRESS = wend_addr;
     }
     else if(vm_cmd.s == 89)
@@ -7532,7 +7585,10 @@ inline int rc_vm_run()
             cycleVideo();
             if(rc_checkEvent())
             {
+                for(int i = 0; i < MAX_WINDOWS; i++)
+                    rc_win_event[i] = 0;
                 while(rc_getEvents()){}
+                //rc_getEvents();
                 #ifndef RC_WINDOWS
                     SDL_PumpEvents();
                 #endif // RC_WINDOWS
@@ -7650,8 +7706,17 @@ inline int rc_vm_run()
     else
     {
         cout << "VM Crashed on " << vm_cmd.s << endl;
+        cout << "CURRENT_SEGMENT: " << RC_CURRENT_SEGMENT << endl;
+        cout << "CURRENT_ADDRESS: " << RC_CURRENT_ADDRESS << endl;
+        //cout << "Test Case: " << (uint16_t)RC_SEGMENT[RC_CURRENT_SEGMENT][RC_CURRENT_ADDRESS-4] << endl;
+        //cout << "Test Case 2: " << (int) ( (uint8_t)RC_SEGMENT[RC_CURRENT_SEGMENT][0] ) << endl;
+        //cout << "Old Data Addr = " << addr_of.RC_SEGMENT[RC_DATA_SEGMENT] << endl;
+        //cout << "New Data Addr = " << (uint64_t)(&RC_SEGMENT[RC_DATA_SEGMENT][0]) << endl;
+        //cout << "Old Data Addr = " << addr_of.RC_SEGMENT[RC_CODE_SEGMENT] << endl;
+        //cout << "New Code Addr = " << (uint64_t)(&RC_SEGMENT[RC_CODE_SEGMENT][0]) << endl;
         //string s; cin >> s;
         rn_val = 0;
+        exit(EXIT_FAILURE);
         return -1;
     }
     return 1;
@@ -8089,6 +8154,11 @@ int main(int argc, char * argv[])
 
     if(!rc_file.is_open())
     {
+        if(argc < 2)
+        {
+            cout << "No RCBASIC Program to Run" << endl;
+            return 0;
+        }
         //cout << "file not open:" << fname << endl;
         //system("PAUSE");
         fname = argv[1];
@@ -8283,6 +8353,7 @@ int main(int argc, char * argv[])
     int dbg_vm = 0;
 
     //Uint32 pt = SDL_GetTicks();
+    //cout << "start loop" << endl;
 
     while(RC_VM_ACTIVE)
     {

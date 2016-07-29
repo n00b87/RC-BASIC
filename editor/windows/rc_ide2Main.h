@@ -17,6 +17,8 @@
 #include <wx/toolbar.h>
 #include <wx/frame.h>
 #include <wx/statusbr.h>
+#include <wx/stdpaths.h>
+#include <wx/process.h>
 //*)
 
 #include <wx/stc/stc.h>
@@ -45,6 +47,7 @@ class rc_ide2Frame: public wxFrame
         void OnDelete(wxCommandEvent& event);
         void OnCompile(wxCommandEvent& event);
         void OnRun(wxCommandEvent& event);
+        void OnStop(wxCommandEvent& event);
         void OnReference(wxCommandEvent& event);
         void OnDocumentKey(wxStyledTextEvent& event);
         //*)
@@ -72,6 +75,7 @@ class rc_ide2Frame: public wxFrame
         static const long toolSaveID;
         static const long toolSaveAsID;
         static const long toolRunID;
+        static const long toolStopID;
         static const long ID_TOOLBAR1;
         //*)
 
@@ -96,12 +100,37 @@ class rc_ide2Frame: public wxFrame
         wxMenuItem* MenuItem6;
         wxAuiNotebook* AuiNotebook1;
         wxToolBarToolBase* ToolBarItem5;
+        wxToolBarToolBase* ToolBarItem6;
         wxMenuItem* MenuItem9;
         wxToolBarToolBase* ToolBarItem2;
         wxMenu* Menu4;
         //*)
 
         DECLARE_EVENT_TABLE()
+};
+
+class MyProcess : public wxProcess
+{
+public:
+    MyProcess(rc_ide2Frame *parent)
+        : wxProcess(parent)//, m_cmd(cmd)
+    {
+        m_parent = parent;
+    }
+
+    // instead of overriding this virtual function we might as well process the
+    // event from it in the frame class - this might be more convenient in some
+    // cases
+    virtual void OnTerminate(int pid, int status)
+    {
+        wxString editor_path = wxStandardPaths::Get().GetExecutablePath();
+        editor_path = editor_path.substr(0, editor_path.find_last_of(_("\\"))) +_("\\");
+        wxSetWorkingDirectory(editor_path);
+    }
+
+protected:
+    rc_ide2Frame *m_parent;
+    //wxString m_cmd;
 };
 
 #endif // RC_IDE2MAIN_H

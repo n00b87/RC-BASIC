@@ -77,6 +77,7 @@ const long rc_ide2Frame::toolOpenID = wxNewId();
 const long rc_ide2Frame::toolSaveID = wxNewId();
 const long rc_ide2Frame::toolSaveAsID = wxNewId();
 const long rc_ide2Frame::toolRunID = wxNewId();
+const long rc_ide2Frame::toolStopID = wxNewId();
 const long rc_ide2Frame::ID_TOOLBAR1 = wxNewId();
 //*)
 
@@ -92,6 +93,8 @@ wxString rc_keywords = _("");
 wxString rc_keywords2 = _("");
 wxFont rc_font;
 int rc_nline = 0;
+long pid = -1;
+wxProcess * vm_process;
 
 void rc_initKeywords()
 {
@@ -122,6 +125,7 @@ void rc_initKeywords()
     rc_keywords += wxT("system videoisplaying roundrect roundrectfill videoend getvideostats setvideodrawrect getvideodrawrect ");
     rc_keywords += wxT("getvideosize videoexists setvideoalpha createsound command command$ numcommands str_f str_f$ str_s str_s$ cls env env$ setenv prefpath prefpath$ numjoyhats joyhat numjoytrackballs getjoytrackball ");
     rc_keywords += wxT("windowhasinputfocus windowhasmousefocus push_n push_s pop_n pop_s pop_s$ n_stack_size s_stack_size joystickisconnected ");
+    rc_keywords += wxT("numwindows windowexists readinput_togglebackspace windowevent_close windowevent_minimize windowevent_maximize ");
 
     rc_keywords2 = wxT("k_0 k_1 k_2 k_3 k_4 k_5 k_6 k_7 k_8 k_9 k_a k_ac_back k_ac_bookmarks k_ac_forward k_ac_home k_ac_refresh k_ac_search k_ac_stop k_again k_alterase k_application ");
     rc_keywords2 += wxT("k_audiomute k_audionext k_audioplay k_audioprev k_audiostop k_b k_backslash k_backspace k_brightnessdown k_brightnessup k_c k_calculator k_cancel k_capslock k_clear ");
@@ -165,7 +169,7 @@ rc_ide2Frame::rc_ide2Frame(wxWindow* parent,wxWindowID id)
     }
     BoxSizer1 = new wxBoxSizer(wxHORIZONTAL);
     AuiNotebook1 = new wxAuiNotebook(this, ID_AUINOTEBOOK1, wxDefaultPosition, wxDefaultSize, wxAUI_NB_DEFAULT_STYLE);
-    BoxSizer1->Add(AuiNotebook1, 1, wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP, 1);
+    BoxSizer1->Add(AuiNotebook1, 1, wxALL|wxEXPAND, 1);
     SetSizer(BoxSizer1);
     MenuBar1 = new wxMenuBar();
     Menu1 = new wxMenu();
@@ -221,6 +225,7 @@ rc_ide2Frame::rc_ide2Frame(wxWindow* parent,wxWindowID id)
     ToolBarItem4 = ToolBar1->AddTool(toolSaveAsID, _("Save File As"), wxArtProvider::GetBitmap(wxART_MAKE_ART_ID_FROM_STR(_T("wxART_FILE_SAVE_AS")),wxART_TOOLBAR), wxNullBitmap, wxITEM_NORMAL, wxEmptyString, _("Save File As"));
     ToolBar1->AddSeparator();
     ToolBarItem5 = ToolBar1->AddTool(toolRunID, _("Run Program"), wxBitmap(wxImage(_T("img\\player_play.png"))), wxNullBitmap, wxITEM_NORMAL, wxEmptyString, _("Run Program"));
+    ToolBarItem6 = ToolBar1->AddTool(toolStopID, _("Stop Program"), wxArtProvider::GetBitmap(wxART_MAKE_ART_ID_FROM_STR(_T("wxART_ERROR")),wxART_TOOLBAR), wxNullBitmap, wxITEM_NORMAL, wxEmptyString, _("Stops Program"));
     ToolBar1->Realize();
     SetToolBar(ToolBar1);
     SetSizer(BoxSizer1);
@@ -247,6 +252,7 @@ rc_ide2Frame::rc_ide2Frame(wxWindow* parent,wxWindowID id)
     Connect(toolSaveID,wxEVT_COMMAND_TOOL_CLICKED,(wxObjectEventFunction)&rc_ide2Frame::onSavePage);
     Connect(toolSaveAsID,wxEVT_COMMAND_TOOL_CLICKED,(wxObjectEventFunction)&rc_ide2Frame::OnSavePageAs);
     Connect(toolRunID,wxEVT_COMMAND_TOOL_CLICKED,(wxObjectEventFunction)&rc_ide2Frame::OnRun);
+    Connect(toolStopID,wxEVT_COMMAND_TOOL_CLICKED,(wxObjectEventFunction)&rc_ide2Frame::OnStop);
     //*)
 }
 
@@ -263,7 +269,7 @@ void rc_ide2Frame::OnQuit(wxCommandEvent& event)
 
 void rc_ide2Frame::OnAbout(wxCommandEvent& event)
 {
-    wxString msg = _("RC BASIC v2.0.5\nCopyright (C) 2015-2016 Rodney Cunningham\n\nFor latest release, updates, and info go to http://www.rcbasic.com");
+    wxString msg = _("RC BASIC v2.0.7\nCopyright (C) 2015-2016 Rodney Cunningham\n\nFor latest release, updates, and info go to http://www.rcbasic.com");
     wxMessageBox(msg);
 }
 
@@ -617,7 +623,7 @@ void rc_ide2Frame::OnCompile(wxCommandEvent& event)
         output.Close();
     }
 
-    wxString fs = rc_path + _("rbc.exe ") + _("\"") + rc_fnames[AuiNotebook1->GetPageIndex(t)] + _("\"");
+    wxString fs = rc_path + _("rcbasic_compile.exe ") + _("\"") + rc_fnames[AuiNotebook1->GetPageIndex(t)] + _("\"");
 
     //wxMessageBox(fs);
     //wxMessageBox(rc_path + _("rb_rt.exe"));
@@ -701,7 +707,7 @@ void rc_ide2Frame::OnRun(wxCommandEvent& event)
         output.Close();
     }
 
-    wxString fs = rc_path + _("rbc.exe ") + _("\"") + rc_fnames[AuiNotebook1->GetPageIndex(t)] + _("\"");
+    wxString fs = rc_path + _("rcbasic_compile.exe ") + _("\"") + rc_fnames[AuiNotebook1->GetPageIndex(t)] + _("\"");
 
     //wxMessageBox(fs);
     //wxMessageBox(rc_path + _("rb_rt.exe"));
@@ -710,20 +716,30 @@ void rc_ide2Frame::OnRun(wxCommandEvent& event)
     //wxString cv_rt;
     rt = wxExecute(fs, wxEXEC_SYNC);
     if(rt != 0)
-        return;
+    {
+        wxFileInputStream input("log.dat");
+        wxTextInputStream text(input);
+        if(input.IsOk() && !input.Eof())
+        {
+            if(text.ReadLine().compare("SUCCESS")==0)
+                rt = 0;
+        }
+        if(rt != 0)
+            return;
+    }
     //wxMessageBox(wxString::Format(wxT("%i"),rt));
     //cv_rt << rt;
     //wxMessageBox(_("Return: ") + cv_rt);
     wxString fc = rc_fnames[AuiNotebook1->GetPageIndex(t)];
     fc = fc.substr(0, fc.find_last_of(_("."))) + _(".cbc");
     wxString fcc = fc;
-    fc = rc_path + _("rb_rt.exe");// + fc;
+    fc = rc_path + _("rcbasic_run.exe");// + fc;
     //wxMessageBox(fs,_("FS"));
     //wxMessageBox(fc,_("FC"));
     //wxMessageBox(rc_fnames[AuiNotebook1->GetPageIndex(t)].substr(0, rc_fnames[AuiNotebook1->GetPageIndex(t)].find_last_of(_("/"))));
     //wxShell(fc);
     //wxExecute(_("/home/cunningham/Desktop/test_runtime/bin/Debug/test_runtime"), wxEXEC_NOHIDE);
-    wxString rc_cwd = rc_fnames[AuiNotebook1->GetPageIndex(t)].substr(0, rc_fnames[AuiNotebook1->GetPageIndex(t)].find_last_of(_("/")));
+    wxString rc_cwd = rc_fnames[AuiNotebook1->GetPageIndex(t)].substr(0, rc_fnames[AuiNotebook1->GetPageIndex(t)].find_last_of(_("\\")));
     //wxSetWorkingDirectory(_("/home/cunningham/Desktop/test_runtime/bin/Debug/"));
     //wxSetWorkingDirectory(rc_cwd);
     //wxMessageBox(rc_cwd,_("Directory"));
@@ -733,11 +749,12 @@ void rc_ide2Frame::OnRun(wxCommandEvent& event)
 //    text.WriteString(fcc);
 //    rc_dtr.Close();
 
-    fs = rc_path + _("rb_rt.exe ") + _("\"") + rc_fnames[AuiNotebook1->GetPageIndex(t)].substr(0,rc_fnames[AuiNotebook1->GetPageIndex(t)].find_first_of(".")) + _(".cbc\"");
+    fs = rc_path + _("rcbasic_run.exe ") + _("\"") + rc_fnames[AuiNotebook1->GetPageIndex(t)].substr(0,rc_fnames[AuiNotebook1->GetPageIndex(t)].find_first_of(".")) + _(".cbc\"");
     //wxMessageBox(rc_fnames[AuiNotebook1->GetPageIndex(t)].substr(0, rc_fnames[AuiNotebook1->GetPageIndex(t)].find_last_of("\\")), _("runtime"));
     wxSetWorkingDirectory(rc_fnames[AuiNotebook1->GetPageIndex(t)].substr(0, rc_fnames[AuiNotebook1->GetPageIndex(t)].find_last_of("\\")));
     //wxSetWorkingDirectory(rc_path);
-    wxExecute(fs, wxEXEC_SYNC);
+    vm_process = new MyProcess(this);
+    pid = wxExecute(fs, wxEXEC_ASYNC | wxEXEC_MAKE_GROUP_LEADER, vm_process);
     //wxShell(rc_path + _("rb_rt ") + fc);
 }
 
@@ -768,4 +785,15 @@ void rc_ide2Frame::OnDocumentKey(wxStyledTextEvent& event)
         t->GotoPos(t->GetLineIndentPosition(currentLine));
     }
 
+}
+
+void rc_ide2Frame::OnStop(wxCommandEvent& event)
+{
+    if(pid != -1)
+    {
+        //wxMessageBox("Kill process");
+        wxKill(pid, wxSIGKILL, NULL, wxKILL_CHILDREN);
+        //std::cout << "program aborted" << endl;
+        pid = -1;
+    }
 }
