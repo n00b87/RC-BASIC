@@ -1,6 +1,10 @@
 #define RC_WINDOWS
 //#define RC_LINUX
 
+#ifdef RC_WINDOWS
+#include <windows.h>
+#endif // RC_WINDOWS
+
 #include <iostream>
 #include <sstream>
 #include <fstream>
@@ -9910,6 +9914,45 @@ void rc_debug()
 //    cout << "rc_intern_arg_id = " << rc_intern_arg_id << endl;
 }
 
+int rc_vm_compile(string in_file, string rc_vm_path)
+{
+    string rc_ext = in_file.substr(in_file.find_last_of("."));
+    //cout << "Extension = " << rc_ext << endl;
+    if(rc_ext.compare(".bas")!=0)
+    {
+        cout << "Source file must be a RCBasic *.bas extension" << endl;
+        system("PAUSE");
+        fstream rc_log("log.dat", fstream::out | fstream::trunc);
+        rc_log << "FAIL";
+        rc_log.close();
+        exit(EXIT_FAILURE);
+    }
+    string out_file = in_file.substr(0, in_file.find_last_of(".")) + ".cbc";
+
+    #ifdef RC_WINDOWS
+    string rc_arg = rc_vm_path + "\\rc_vm_asm.exe " + out_file;
+    #else
+    string rc_arg = rc_vm_path + "/rc_vm_asm " + out_file;
+    #endif // RC_WINDOWS
+
+    if(system(rc_arg.c_str())!=0)
+    {
+        cout << "Error Generating Bytecode" << endl;
+        system("PAUSE");
+        fstream rc_log("log.dat", fstream::out | fstream::trunc);
+        rc_log << "FAIL";
+        rc_log.close();
+        exit(EXIT_FAILURE);
+    }
+
+    remove("rcbasic.rc_asm");
+    remove("rcbasic_code.rc_bin");
+    remove("rcbasic_data.data");
+    remove("rcbasic_data.rc_bin");
+    remove("rcbasic_final.rc_asm");
+    return 0;
+}
+
 int main(int argc, char * argv[])
 {
 //    rc_file.open("/home/n00b/Desktop/rc_lib.bas", fstream::out);
@@ -9963,6 +10006,9 @@ int main(int argc, char * argv[])
         #ifdef RC_WINDOWS
             system("PAUSE");
         #endif // RC_WINDOWS
+        fstream rc_log("log.dat", fstream::out | fstream::trunc);
+        rc_log << "FAIL";
+        rc_log.close();
         exit(EXIT_FAILURE);
         return 0;
     }
@@ -9998,6 +10044,9 @@ int main(int argc, char * argv[])
             #ifdef RC_WINDOWS
                 system("PAUSE");
             #endif // RC_WINDOWS
+            fstream rc_log("log.dat", fstream::out | fstream::trunc);
+            rc_log << "FAIL";
+            rc_log.close();
             exit(EXIT_FAILURE);
             return 2;
         }
@@ -10061,6 +10110,9 @@ int main(int argc, char * argv[])
             #ifdef RC_WINDOWS
                 system("PAUSE");
             #endif
+            fstream rc_log("log.dat", fstream::out | fstream::trunc);
+            rc_log << "FAIL";
+            rc_log.close();
             exit(EXIT_FAILURE);
             return 2;
         }
@@ -10073,6 +10125,9 @@ int main(int argc, char * argv[])
                 #ifdef RC_WINDOWS
                     system("PAUSE");
                 #endif // RC_WINDOWS
+                fstream rc_log("log.dat", fstream::out | fstream::trunc);
+                rc_log << "FAIL";
+                rc_log.close();
                 exit(EXIT_FAILURE);
                 return 2;
             }
@@ -10130,6 +10185,32 @@ int main(int argc, char * argv[])
 
     remove("rc_file_copy.bas");
     remove("tmp.bas");
+
+    cout << "HOOAH" << endl;
+
+    string out_file = in_file.substr(0, in_file.find_last_of(".")) + ".cbc";
+
+    #ifdef RC_WINDOWS
+    char * rc_path = new char[BUFSIZ];
+    GetCurrentDirectory(BUFSIZ, rc_path);
+    string rc_vm_path = (string)rc_path;
+    #else
+    char * rc_path = realpath(argv[0], NULL);
+    string rc_vm_path = (string)rc_path;
+    rc_vm_path = rc_vm_path.substr(0, rc_vm_path.find_last_of("/"));
+    free(rc_path);
+    rc_path = NULL;
+    #endif // RC_WINDOWS
+
+    //cout << "Call VM ASM: " << rc_vm_path << endl;
+    //system("PAUSE");
+
+    rc_vm_compile(in_file, rc_vm_path);
+
+    //system("PAUSE");
+    fstream rc_log("log.dat", fstream::out | fstream::trunc);
+    rc_log << "SUCCESS";
+    rc_log.close();
 
     exit(EXIT_SUCCESS);
     return 0;
