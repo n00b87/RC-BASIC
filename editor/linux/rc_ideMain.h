@@ -7,30 +7,34 @@
  * License:
  **************************************************************/
 
-#ifndef RC_IDE2MAIN_H
-#define RC_IDE2MAIN_H
+#ifndef RC_IDEMAIN_H
+#define RC_IDEMAIN_H
 
-//(*Headers(rc_ide2Frame)
+#include <wx/wx.h>
+
+//(*Headers(rc_ideFrame)
+#include <wx/toolbar.h>
 #include <wx/sizer.h>
 #include <wx/menu.h>
-#include <wx/aui/aui.h>
-#include <wx/toolbar.h>
-#include <wx/frame.h>
 #include <wx/statusbr.h>
+#include <wx/frame.h>
+#include <wx/aui/aui.h>
 //*)
 
+#include <wx/process.h>
+#include <wx/stdpaths.h>
 #include <wx/stc/stc.h>
 
-class rc_ide2Frame: public wxFrame
+class rc_ideFrame: public wxFrame
 {
     public:
 
-        rc_ide2Frame(wxWindow* parent,wxWindowID id = -1);
-        virtual ~rc_ide2Frame();
+        rc_ideFrame(wxWindow* parent,wxWindowID id = -1);
+        virtual ~rc_ideFrame();
 
     private:
 
-        //(*Handlers(rc_ide2Frame)
+        //(*Handlers(rc_ideFrame)
         void OnQuit(wxCommandEvent& event);
         void OnAbout(wxCommandEvent& event);
         void OnNewPage(wxCommandEvent& event);
@@ -47,9 +51,10 @@ class rc_ide2Frame: public wxFrame
         void OnRun(wxCommandEvent& event);
         void OnReference(wxCommandEvent& event);
         void OnDocumentKey(wxStyledTextEvent& event);
+        void OnStop(wxCommandEvent& event);
         //*)
 
-        //(*Identifiers(rc_ide2Frame)
+        //(*Identifiers(rc_ideFrame)
         static const long ID_AUINOTEBOOK1;
         static const long newID;
         static const long openID;
@@ -72,36 +77,61 @@ class rc_ide2Frame: public wxFrame
         static const long toolSaveID;
         static const long toolSaveAsID;
         static const long toolRunID;
+        static const long toolStopID;
         static const long ID_TOOLBAR1;
         //*)
 
-        //(*Declarations(rc_ide2Frame)
-        wxToolBarToolBase* ToolBarItem4;
-        wxMenuItem* MenuItem8;
-        wxToolBar* ToolBar1;
-        wxMenuItem* MenuItem7;
-        wxToolBarToolBase* ToolBarItem3;
-        wxMenuItem* MenuItem5;
-        wxMenu* Menu3;
-        wxMenuItem* MenuItem4;
-        wxMenuItem* MenuItem14;
-        wxMenuItem* MenuItem11;
-        wxMenuItem* MenuItem15;
-        wxMenuItem* MenuItem13;
-        wxMenuItem* MenuItem10;
-        wxMenuItem* MenuItem12;
-        wxToolBarToolBase* ToolBarItem1;
-        wxMenuItem* MenuItem3;
-        wxStatusBar* StatusBar1;
-        wxMenuItem* MenuItem6;
-        wxAuiNotebook* AuiNotebook1;
+        //(*Declarations(rc_ideFrame)
         wxToolBarToolBase* ToolBarItem5;
-        wxMenuItem* MenuItem9;
+        wxStatusBar* StatusBar1;
+        wxMenuItem* MenuItem12;
+        wxToolBarToolBase* ToolBarItem6;
+        wxMenu* Menu3;
+        wxMenuItem* MenuItem15;
         wxToolBarToolBase* ToolBarItem2;
+        wxMenuItem* MenuItem3;
+        wxAuiNotebook* AuiNotebook1;
+        wxMenuItem* MenuItem9;
         wxMenu* Menu4;
+        wxToolBar* ToolBar1;
+        wxMenuItem* MenuItem11;
+        wxToolBarToolBase* ToolBarItem4;
+        wxMenuItem* MenuItem5;
+        wxToolBarToolBase* ToolBarItem1;
+        wxMenuItem* MenuItem10;
+        wxToolBarToolBase* ToolBarItem3;
+        wxMenuItem* MenuItem7;
+        wxMenuItem* MenuItem4;
+        wxMenuItem* MenuItem6;
+        wxMenuItem* MenuItem13;
+        wxMenuItem* MenuItem8;
+        wxMenuItem* MenuItem14;
         //*)
 
         DECLARE_EVENT_TABLE()
 };
 
-#endif // RC_IDE2MAIN_H
+class MyProcess : public wxProcess
+{
+public:
+    MyProcess(rc_ideFrame *parent)
+        : wxProcess(parent)//, m_cmd(cmd)
+    {
+        m_parent = parent;
+    }
+
+    // instead of overriding this virtual function we might as well process the
+    // event from it in the frame class - this might be more convenient in some
+    // cases
+    virtual void OnTerminate(int pid, int status)
+    {
+        wxString editor_path = wxStandardPaths::Get().GetExecutablePath();
+        editor_path = editor_path.substr(0, editor_path.find_last_of(_("/"))) +_("/");
+        wxSetWorkingDirectory(editor_path);
+    }
+
+protected:
+    rc_ideFrame *m_parent;
+    //wxString m_cmd;
+};
+#endif // RC_IDEMAIN_H

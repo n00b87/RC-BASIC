@@ -7,15 +7,15 @@
  * License:
  **************************************************************/
 
-#ifndef RC_IDE2APP_H
-#define RC_IDE2APP_H
+#ifndef RC_IDEAPP_H
+#define RC_IDEAPP_H
 
 #include <wx/app.h>
 
-class rc_ide2App : public wxApp
+class rc_ideApp : public wxApp
 {
     public:
         virtual bool OnInit();
 };
 
-#endif // RC_IDE2APP_H
+#endif // RC_IDEAPP_H

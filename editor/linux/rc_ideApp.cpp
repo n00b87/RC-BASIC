@@ -15,16 +15,16 @@
 #include <wx/image.h>
 //*)
 
-IMPLEMENT_APP(rc_ide2App);
+IMPLEMENT_APP_CONSOLE(rc_ideApp);
 
-bool rc_ide2App::OnInit()
+bool rc_ideApp::OnInit()
 {
     //(*AppInitialize
     bool wxsOK = true;
     wxInitAllImageHandlers();
     if ( wxsOK )
     {
-    	rc_ide2Frame* Frame = new rc_ide2Frame(0);
+    	rc_ideFrame* Frame = new rc_ideFrame(0);
     	Frame->Show();
     	SetTopWindow(Frame);
     }
