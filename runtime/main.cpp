@@ -1,5 +1,5 @@
-#define RC_WINDOWS
-//#define RC_LINUX
+//#define RC_WINDOWS
+#define RC_LINUX
 //#define RC_ANDROID
 
 #ifdef RC_ANDROID
@@ -5337,12 +5337,12 @@ inline unsigned long rc_intern_fileLength()
 
 inline long rc_intern_fileTell()
 {
-    return SDL_RWtell(rc_fstream[TELL_STREAM]);
+    return SDL_RWtell(rc_fstream[(int)rc_nid[TELL_STREAM][0]]);
 }
 
 inline unsigned long rc_intern_fileSeek()
 {
-    return SDL_RWseek(rc_fstream[SEEK_STREAM],rc_nid[SEEK_POSITION][0],RW_SEEK_SET);
+    return SDL_RWseek(rc_fstream[(int)rc_nid[SEEK_STREAM][0]],rc_nid[SEEK_POSITION][0],RW_SEEK_SET);
 }
 
 inline int rc_intern_eof()
@@ -7181,7 +7181,9 @@ inline int rc_vm_run()
     }
     else if(vm_cmd.s == 78) //mul
     {
+        //cout << "\n\nstart xor\n";
         rc_vm_xor();
+        //cout << "\nend xor\n\n";
     }
     else if(vm_cmd.s == 79) //mul
     {
