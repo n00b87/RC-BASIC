@@ -7,3 +7,5 @@ improve it.
 
 
 Special Thanks to the sdlBasic community and the retrogamecoding and BP community.
+
+You can get the current build at http://rcbasic.freeforums.net
